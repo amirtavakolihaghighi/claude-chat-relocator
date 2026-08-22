@@ -334,7 +334,9 @@ function renderDashboard() {
     el('div', { class: 'card' }, el('div', { class: 'num', text: fmtNum(c.total) }), el('div', { class: 'lbl', text: 'projects' })),
     el('div', { class: 'card' }, el('div', { class: 'num', text: fmtNum(state.projects.reduce((a, p) => a + p.sessionCount, 0)) }), el('div', { class: 'lbl', text: 'chats' })),
     el('div', { class: 'card' + (c.orphaned ? ' bad' : '') }, el('div', { class: 'num', text: fmtNum(c.orphaned) }), el('div', { class: 'lbl', text: 'project folder missing' })),
-    el('div', { class: 'card' + (c.mismatched ? ' warn' : '') }, el('div', { class: 'num', text: fmtNum(c.mismatched) }), el('div', { class: 'lbl', text: 'hidden from the extension' }))));
+    el('div', { class: 'card' + (c.mismatched ? ' warn' : '') }, el('div', { class: 'num', text: fmtNum(c.mismatched) }), el('div', { class: 'lbl', text: 'hidden from the extension' })),
+    // Only worth a card when it happens; most stores never see this one.
+    c.ambiguous ? el('div', { class: 'card warn' }, el('div', { class: 'num', text: fmtNum(c.ambiguous) }), el('div', { class: 'lbl', text: 'sharing a folder' })) : null));
 
   if (bad.length) {
     sheet.appendChild(el('h2', { text: 'Needs attention' }));

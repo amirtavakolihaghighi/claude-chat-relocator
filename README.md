@@ -62,6 +62,13 @@ The dashboard separates three failures that look alike but are not:
 | **hidden** | The folder's name no longer encodes its recorded path, so the extension never looks there. Chats sitting in plain sight, invisible. |
 | **shared** | Two different projects landed in one folder because their paths encode identically. See [ENCODING.md](docs/ENCODING.md). |
 
+![All three problem states at once: a project whose folder is missing, one hidden from the extension, and two projects sharing a single folder](docs/images/needs-attention.png)
+
+Every badge above is the app reading a real store and reporting what it found.
+You can reproduce this exact state on your own machine with
+`node scripts/demo-store.js`, which builds a throwaway store and tells you what
+to delete afterwards.
+
 ### Read your chats properly
 Full transcript rendering: markdown, syntax-highlighted code, real unified
 diffs for every edit, separated stdout and stderr, todo lists, inline

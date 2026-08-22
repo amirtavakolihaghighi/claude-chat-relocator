@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { makeStore, useTempAppData } = require('./helpers');
+const { makeStore, useTempAppData } = require('../fixtures/store');
 const { Store } = require('../server/store');
 const RL = require('../server/relocate');
 const P = require('../server/paths');
@@ -102,7 +102,9 @@ test('historical mentions of the old path are left alone', (t) => {
   // record of what happened and must survive the move.
   const joined = after.map((f) => f.text).join('');
   assert.ok(joined.includes('app.js'));
-  assert.ok(/Demo\\{1,2}app\.js/.test(joined), 'the old file path stays as history');
+  // Accept either separator: the assertion is about the old *directory* still
+  // being mentioned, not about which slash the fixture happened to use.
+  assert.ok(/Demo(\\{1,2}|\/)app\.js/.test(joined), 'the old file path stays as history');
 });
 
 test('undo restores the folder byte for byte', (t) => {

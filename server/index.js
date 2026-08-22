@@ -68,6 +68,7 @@ app.get('/api/projects', route((req, res) => {
       healthy: scan.projects.filter((p) => p.healthy).length,
       orphaned: scan.projects.filter((p) => p.issues.includes('orphaned')).length,
       mismatched: scan.projects.filter((p) => p.issues.includes('mismatch')).length,
+      ambiguous: scan.projects.filter((p) => p.issues.includes('ambiguous')).length,
     },
     projects: scan.projects.map((p) => ({
       folderName: p.folderName,

@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { makeStore, useTempAppData } = require('./helpers');
+const { makeStore, useTempAppData } = require('../fixtures/store');
 const { Store } = require('../server/store');
 const P = require('../server/paths');
 
@@ -51,7 +51,7 @@ test('two projects sharing one encoded name are flagged as ambiguous', (t) => {
 
   // Drop a second session recorded against the other project into that folder.
   const folder = path.join(built.root, P.encodeProjectFolder(A));
-  const { sessionLines } = require('./helpers');
+  const { sessionLines } = require('../fixtures/store');
   fs.writeFileSync(path.join(folder, 'aaaaaaaa-0000-4000-8000-000000000000.jsonl'),
     sessionLines(B, 'aaaaaaaa-0000-4000-8000-000000000000', {}), 'utf8');
 
@@ -65,7 +65,7 @@ test('drive-letter case variants of one path are not ambiguous', (t) => {
   t.after(built.cleanup);
 
   const folder = path.join(built.root, 'd--Files-Projects-Demo');
-  const { sessionLines } = require('./helpers');
+  const { sessionLines } = require('../fixtures/store');
   fs.writeFileSync(path.join(folder, 'bbbbbbbb-0000-4000-8000-000000000000.jsonl'),
     sessionLines('d:\\Files\\Projects\\Demo', 'bbbbbbbb-0000-4000-8000-000000000000', {}), 'utf8');
 

@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { makeStore } = require('./helpers');
+const { makeStore } = require('../fixtures/store');
 const { parseSessionFile, peekSessionFile } = require('../server/parser');
 
 function firstSession(root) {

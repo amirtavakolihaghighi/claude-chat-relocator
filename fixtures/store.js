@@ -13,6 +13,19 @@ const path = require('path');
 
 let counter = 0;
 
+/**
+ * Join a path the way the fixture's own platform would.
+ *
+ * `path.join` uses the *host* separator, so a fake Windows cwd would gain a
+ * "/" on Linux and a "\" on Windows, and the same fixture would produce
+ * different bytes on different CI runners. Follow the separator already in the
+ * base instead, so a Windows-shaped fixture stays Windows-shaped everywhere.
+ */
+function joinLike(base, leaf) {
+  const sep = String(base).includes('\\') ? '\\' : '/';
+  return String(base).replace(/[\\/]+$/, '') + sep + leaf;
+}
+
 function tempDir(label = 'ccr') {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${label}-`));
   return dir;
@@ -85,7 +98,7 @@ function toolResult(cwd, sessionId, i, toolId, content, structured) {
  * command, and the ai-title record Claude Code writes.
  */
 function sessionLines(cwd, sessionId, { title = 'A test conversation' } = {}) {
-  const editFile = path.join(cwd, 'app.js');
+  const editFile = joinLike(cwd, 'app.js');
   const lines = [
     { type: 'queue-operation', operation: 'enqueue', timestamp: '2026-08-01T10:00:00.000Z', sessionId },
     userText(cwd, sessionId, 0, 'Please fix the bug in `app.js` and run the tests.'),

@@ -20,7 +20,7 @@ you edit is what runs.
 
 **Never test against your real `~/.claude/projects`.**
 
-The tests build their own store in a temp directory (`test/helpers.js`) and
+The tests build their own store in a temp directory (`fixtures/store.js`) and
 redirect the app's data directory too, so they can never touch real history. If
 you add a test that writes, use the same helpers.
 
@@ -47,6 +47,21 @@ CLAUDE_PROJECTS_DIR=/path/to/a/copy npm start
   fifth, say why in the PR.
 - **Match the surrounding code.** Plain CommonJS, two-space indent, comments
   that explain *why* rather than restating the line below.
+
+Fixtures live in `fixtures/` rather than `test/`, because Node's test runner
+treats every file under a `test` directory as a test file and would otherwise
+run the helper as one.
+
+To see the app in every state it can report — a missing project, a folder the
+extension cannot find, two projects sharing one folder — build a throwaway
+store:
+
+```bash
+node scripts/demo-store.js
+```
+
+It prints the command to start the app against it, and the folder to delete
+afterwards. Nothing it does touches `~/.claude`.
 
 ## Project layout
 
