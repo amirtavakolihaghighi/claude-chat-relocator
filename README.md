@@ -14,8 +14,12 @@ Read, relocate and export the chat history the Claude Code VS Code extension
 keeps in `~/.claude/projects`.
 
 [What it does](#what-it-does) · [Install](#install) ·
-[Why chats vanish](#why-chats-vanish-when-you-move-a-project) ·
+[Why chats vanish](#the-problem) ·
 [Safety](#safety) · [Docs](docs/)
+
+<br>
+
+![The dashboard: every project Claude Code has chats for, with the state of each one](docs/images/dashboard.png)
 
 </div>
 
@@ -63,6 +67,8 @@ Full transcript rendering: markdown, syntax-highlighted code, real unified
 diffs for every edit, separated stdout and stderr, todo lists, inline
 screenshots. Tool calls collapse to a single line so the conversation stays
 readable, and expand when you want the detail.
+
+![A session open in the transcript viewer, showing the conversation with collapsed tool calls and a summary of tokens, duration and tool usage](docs/images/transcript.png)
 
 ### Move everything at once
 Set up a new machine, or moved your whole projects directory? Give the old and
