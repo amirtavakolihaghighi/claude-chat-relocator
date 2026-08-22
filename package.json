@@ -1,0 +1,52 @@
+{
+  "name": "claude-chat-relocator",
+  "version": "1.0.0",
+  "description": "Read, relocate and export the Claude Code chat histories stored in ~/.claude/projects. Repoints chats at a project after you move it, so the VS Code extension finds them again.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "vscode",
+    "chat-history",
+    "transcript",
+    "jsonl",
+    "export",
+    "backup"
+  ],
+  "homepage": "https://github.com/amirtavakolihaghighi/claude-chat-relocator#readme",
+  "bugs": {
+    "url": "https://github.com/amirtavakolihaghighi/claude-chat-relocator/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amirtavakolihaghighi/claude-chat-relocator.git"
+  },
+  "license": "MIT",
+  "author": "Amir Tavakoli Haghighi",
+  "type": "commonjs",
+  "main": "server/index.js",
+  "bin": {
+    "claude-chat-relocator": "server/index.js"
+  },
+  "files": [
+    "server/",
+    "public/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:watch": "node --test --watch \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "express": "^4.21.2",
+    "highlight.js": "^11.11.1",
+    "marked": "^15.0.7"
+  }
+}

@@ -1,0 +1,88 @@
+name: Bug report
+description: Something behaved incorrectly.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        **Before you post:** please do not paste the contents of a `.jsonl`
+        session file. They contain your entire conversation, including anything
+        you shared with Claude. A folder name and an error message are almost
+        always enough.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, and what did the app do?
+      placeholder: |
+        I clicked Relocate on a project and chose E:\Dev\MyApp.
+        It said "Cannot relocate" but did not explain why.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: input
+    id: folder-name
+    attributes:
+      label: The chat folder name involved
+      description: The folder under `~/.claude/projects`, if the problem concerns a specific project.
+      placeholder: d--Files-Projects-MyApp
+    validations:
+      required: false
+
+  - type: dropdown
+    id: path-kind
+    attributes:
+      label: Does the project path contain non-Latin characters or spaces?
+      description: Persian, Arabic, Cyrillic, CJK and similar scripts encode one dash per character, which has some sharp edges.
+      options:
+        - "No, plain ASCII"
+        - "Yes, it has spaces"
+        - "Yes, it has non-Latin characters"
+        - "Yes, both"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 / macOS 15 / Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      description: Run `node -v`
+      placeholder: v22.11.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal output
+      description: Anything printed in the window running the app. This is automatically formatted as code.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have not included the contents of a session file in this report.
+          required: true

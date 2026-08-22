@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest something the tool should be able to do.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that is awkward or impossible today?
+      placeholder: |
+        I keep chats for forty projects and I move them between two machines
+        every few weeks. Doing them one at a time is slow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+      description: A rough sketch is fine. It does not have to be a finished design.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead right now
+      description: Including "nothing" or "I edit the files by hand".
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      description: This tool deliberately stays narrow — it reads, relocates and exports chat history. It does not talk to the Claude API or modify your projects.
+      options:
+        - label: This fits within reading, relocating, or exporting chat history.
+          required: false

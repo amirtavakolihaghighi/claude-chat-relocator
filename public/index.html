@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Chat Relocator</title>
+<link rel="stylesheet" href="/transcript.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#128193;</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">&#9679;</span>
+    <span class="bname">Claude Chat Relocator</span>
+  </div>
+
+  <button class="rootbtn" id="rootBtn" title="The .claude/projects folder being read">
+    <span class="rootlabel">store</span>
+    <span class="rootpath" id="rootPath">…</span>
+  </button>
+
+  <div class="searchbox">
+    <input type="search" id="search" placeholder="Search every chat…" autocomplete="off" spellcheck="false">
+    <kbd>/</kbd>
+  </div>
+
+  <div class="topactions">
+    <button class="btn" id="bulkBtn" title="Remap many projects at once">Bulk remap</button>
+    <button class="btn" id="importBtn" title="Import a chat archive from another machine">Import</button>
+    <button class="btn" id="exportAllBtn" title="Export chats as a portable archive">Archive</button>
+    <button class="btn" id="historyBtn" title="Undo a previous relocation">History</button>
+    <button class="btn icon" id="themeBtn" title="Switch theme">&#9681;</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidehead">
+      <div class="filters" id="filters">
+        <button class="chip on"   data-filter="all">All</button>
+        <button class="chip warn" data-filter="problems">Needs attention</button>
+      </div>
+      <button class="btn tiny" id="refreshBtn" title="Rescan the store">Rescan</button>
+    </div>
+    <nav class="projects" id="projects" aria-label="Projects"></nav>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="empty" id="welcome">
+      <p>Loading…</p>
+    </div>
+  </main>
+</div>
+
+<div class="modal-root" id="modalRoot" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
