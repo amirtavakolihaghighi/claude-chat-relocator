@@ -5,6 +5,44 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-23
+
+### Fixed
+
+- **Drive letters now compare case-insensitively on every platform, not just
+  Windows.** Claude Code records both `D:\Files\Foo` and `d:\Files\Foo` for a
+  single project. On Linux and macOS those were treated as two different
+  projects, so a store copied off a Windows machine and opened elsewhere
+  reported its folders as shared between two projects — a false diagnosis from
+  the check that exists to give an accurate one. The rest of a POSIX path still
+  compares case-sensitively.
+- The test suite could not run on Node 20. It was invoked with a glob pattern,
+  and glob support in Node's test runner only arrived in Node 21.
+- One test asserted a Windows path separator, so it failed on Linux and macOS.
+  Fixtures now keep their own separator regardless of which platform builds
+  them.
+
+### Added
+
+- A **"sharing a folder"** count on the dashboard. The state was already
+  detected and badged in the sidebar, but was missing from the summary row, so
+  it was invisible at a glance. The card appears only when the count is
+  non-zero.
+- `scripts/demo-store.js`, which builds a throwaway store containing every
+  state the app can report — healthy projects, one whose folder is missing, one
+  renamed so the extension cannot find it, and two that share a folder because
+  their names encode identically. For screenshots, and for trying a relocation
+  on data nobody cares about. It never touches `~/.claude`.
+- Screenshots in the README.
+
+### Changed
+
+- Test fixtures moved from `test/` to `fixtures/`. Node's test runner treats
+  every file under a `test` directory as a test file, so the shared helper was
+  being run as one.
+- CI is green on Node 20, 22 and 24 across Linux, Windows and macOS. It was
+  passing only on Windows with Node 22 and 24 at the time of the 1.0.0 release.
+
 ## [1.0.0] - 2026-08-22
 
 First release.
@@ -37,8 +75,8 @@ First release.
   errors, and the files a session changed.
 - Double-click launchers for Windows (`start.cmd`) and macOS/Linux
   (`start.sh`) that install dependencies on first run.
-- 74 tests covering the encoding rule, parsing, relocation, archives and
-  rendering, run on Node 20/22/24 across Linux, Windows and macOS.
+- 72 tests covering the encoding rule, parsing, relocation, archives and
+  rendering.
 
 ### Notes
 
@@ -50,4 +88,5 @@ First release.
   deliberately left untouched during relocation. They record what happened at
   the time and are not configuration.
 
+[1.0.1]: https://github.com/amirtavakolihaghighi/claude-chat-relocator/releases/tag/v1.0.1
 [1.0.0]: https://github.com/amirtavakolihaghighi/claude-chat-relocator/releases/tag/v1.0.0
