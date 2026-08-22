@@ -37,7 +37,7 @@ First release.
   errors, and the files a session changed.
 - Double-click launchers for Windows (`start.cmd`) and macOS/Linux
   (`start.sh`) that install dependencies on first run.
-- 72 tests covering the encoding rule, parsing, relocation, archives and
+- 74 tests covering the encoding rule, parsing, relocation, archives and
   rendering, run on Node 20/22/24 across Linux, Windows and macOS.
 
 ### Notes

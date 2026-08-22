@@ -41,9 +41,19 @@ function normalizePath(p) {
   return s;
 }
 
-/** Windows paths compare case-insensitively; POSIX paths do not. */
+/**
+ * Fold a path for comparison.
+ *
+ * Windows paths compare case-insensitively; POSIX paths do not. But a *drive
+ * letter* is case-insensitive no matter which machine is doing the reading --
+ * Claude Code records both "D:\..." and "d:\..." for one project, and a store
+ * copied from Windows is often inspected on Linux or macOS. Folding the drive
+ * letter on every platform keeps those two spellings recognisable as one path.
+ */
 function foldCase(p) {
-  return IS_WIN ? String(p).toLowerCase() : String(p);
+  const s = String(p);
+  const withDrive = /^[a-zA-Z]:/.test(s) ? s[0].toLowerCase() + s.slice(1) : s;
+  return IS_WIN ? withDrive.toLowerCase() : withDrive;
 }
 
 function looksAbsolute(p) {

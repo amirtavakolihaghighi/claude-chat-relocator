@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { makeStore } = require('../fixtures/store');
 const { parseSessionFile, peekSessionFile } = require('../server/parser');
+const P = require('../server/paths');
 
 function firstSession(root) {
   const folder = fs.readdirSync(root)[0];
@@ -20,7 +21,7 @@ test('parses a session into chat turns', (t) => {
   const { session } = parseSessionFile(firstSession(store.root));
 
   assert.equal(session.title, 'Fix the bug');
-  assert.equal(session.projectPath, 'D:\\Files\\Projects\\Demo'.replace(/\\/g, path.sep));
+  assert.equal(session.projectPath, P.normalizePath('D:\\Files\\Projects\\Demo'));
   assert.equal(session.folderNameMatchesCwd, true);
   assert.equal(session.parseErrors.length, 0);
   assert.equal(session.stats.humanTurns, 1);
@@ -124,7 +125,7 @@ test('the project root is the cwd that encodes to the folder name', (t) => {
   fs.appendFileSync(file, extra + '\n', 'utf8');
 
   const { session } = parseSessionFile(file);
-  assert.equal(session.projectPath, 'D:\\Files\\Projects\\Demo'.replace(/\\/g, path.sep));
+  assert.equal(session.projectPath, P.normalizePath('D:\\Files\\Projects\\Demo'));
   assert.ok(session.cwds.length > 1, 'the sub-directory cwd is still recorded');
 });
 

@@ -8,7 +8,7 @@ This puts them back.**
 [![CI](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml/badge.svg)](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/tests-74%20passing-brightgreen.svg)](test/)
 
 Read, relocate and export the chat history the Claude Code VS Code extension
 keeps in `~/.claude/projects`.
@@ -127,7 +127,7 @@ Opens `http://127.0.0.1:4317`. Node 20+.
 PORT=4400 npm start                  # different port
 NO_OPEN=1 npm start                  # do not launch a browser
 CLAUDE_PROJECTS_DIR=/some/copy npm start   # read a store from elsewhere
-npm test                             # 72 tests, no real data touched
+npm test                             # 74 tests, no real data touched
 ```
 
 ## Safety

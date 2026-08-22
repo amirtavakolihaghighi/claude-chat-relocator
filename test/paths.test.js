@@ -110,6 +110,23 @@ test('replacePrefix preserves non-ASCII tails', () => {
   assert.match(out, /فایل\.js$/);
 });
 
+test('a drive letter folds on every platform, not just Windows', () => {
+  // Claude Code records both "D:\..." and "d:\..." for one project, and a
+  // Windows store is often inspected on Linux or macOS. If the drive letter
+  // only folded on Windows, those two spellings would look like two separate
+  // projects there and the folder would be reported as shared.
+  assert.ok(P.pathsEqual('D:\\Files\\Foo', 'd:\\Files\\Foo'));
+  assert.ok(P.isUnder('d:\\Files\\Foo\\bar', 'D:\\Files\\Foo'));
+  assert.equal(P.foldCase('D:\\Files\\Foo'), P.foldCase('d:\\Files\\Foo'));
+  assert.equal(P.replacePrefix('d:\\Files\\Foo\\a.js', 'D:\\Files\\Foo', 'E:\\Bar'),
+    WIN ? 'E:\\Bar\\a.js' : 'E:/Bar/a.js');
+});
+
+test('folding a drive letter does not fold the rest of a POSIX path', () => {
+  if (WIN) return;   // on Windows everything folds anyway
+  assert.equal(P.pathsEqual('/home/Foo', '/home/foo'), false);
+});
+
 if (WIN) {
   test('Windows path comparison ignores case', () => {
     assert.ok(P.pathsEqual('D:\\Files\\Foo', 'd:\\files\\FOO'));
