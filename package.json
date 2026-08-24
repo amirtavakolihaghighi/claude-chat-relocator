@@ -1,6 +1,6 @@
 {
   "name": "claude-chat-relocator",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Read, relocate and export the Claude Code chat histories stored in ~/.claude/projects. Repoints chats at a project after you move it, so the VS Code extension finds them again.",
   "keywords": [
     "claude",
