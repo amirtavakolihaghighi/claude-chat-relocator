@@ -13,6 +13,9 @@ build/
 
 # editors
 .vscode/
+# ...but the extension's F5 config is part of the project
+!extension/.vscode/
+!extension/.vscode/launch.json
 .idea/
 *.swp
 .DS_Store
