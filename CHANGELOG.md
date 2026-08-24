@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **A VS Code extension**, in `extension/`. It knows which workspace you have
+  open, so it can notice at that moment that the chats for it are recorded
+  against a path which no longer exists, and offer to repoint them. Status bar
+  item with the chat count, four commands, and relocation through the same
+  planner the web app uses — plan shown first, backup taken, undo offered in
+  the success notification.
+
+  Not published to any marketplace. Build a `.vsix` with
+  `cd extension && npm run package`, or press F5 in the `extension` folder.
+
 ## [1.1.0] - 2026-08-23
 
 ### Added

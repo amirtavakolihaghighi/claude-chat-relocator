@@ -8,7 +8,7 @@ This puts them back.**
 [![CI](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml/badge.svg)](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/tests-86%20passing-brightgreen.svg)](test/)
 
 Read, relocate and export the chat history the Claude Code VS Code extension
 keeps in `~/.claude/projects`.
@@ -106,6 +106,16 @@ elsewhere, say where each project lives now, and the folders are rebuilt with
 correct names and rewritten paths. Hand-made zips work too — the original paths
 are recovered from the files themselves.
 
+## A VS Code extension
+
+There is also a small extension in [`extension/`](extension/) that does the one
+thing only an extension can: it knows which workspace you have open, so it spots
+that its chats are orphaned the moment you open it, and offers to repoint them
+in one click. It is not on any marketplace — build a `.vsix` and install it
+yourself, or press F5 in that folder to try it.
+
+See [extension/README.md](extension/README.md).
+
 ## Install
 
 ### If you are not a developer
@@ -134,7 +144,7 @@ Opens `http://127.0.0.1:4317`. Node 20+.
 PORT=4400 npm start                  # different port
 NO_OPEN=1 npm start                  # do not launch a browser
 CLAUDE_PROJECTS_DIR=/some/copy npm start   # read a store from elsewhere
-npm test                             # 79 tests, no real data touched
+npm test                             # 86 tests, no real data touched
 ```
 
 ## Safety

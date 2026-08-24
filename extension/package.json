@@ -1,0 +1,76 @@
+{
+  "name": "claude-chat-relocator",
+  "displayName": "Claude Chat Relocator",
+  "description": "Notices when the Claude Code chats for the project you just opened are orphaned, and repoints them in one click.",
+  "version": "0.1.0",
+  "publisher": "amirtavakolihaghighi",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "claude",
+    "claude code",
+    "chat history",
+    "anthropic"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amirtavakolihaghighi/claude-chat-relocator.git"
+  },
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "claudeChats.check",
+        "title": "Check this workspace",
+        "category": "Claude Chats"
+      },
+      {
+        "command": "claudeChats.relocateHere",
+        "title": "Relocate chats to this workspace",
+        "category": "Claude Chats"
+      },
+      {
+        "command": "claudeChats.revealFolder",
+        "title": "Reveal the chat folder for this workspace",
+        "category": "Claude Chats"
+      },
+      {
+        "command": "claudeChats.undoLast",
+        "title": "Undo the last relocation",
+        "category": "Claude Chats"
+      }
+    ],
+    "configuration": {
+      "title": "Claude Chat Relocator",
+      "properties": {
+        "claudeChats.storePath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where Claude Code keeps its chats. Leave empty to use `~/.claude/projects`."
+        },
+        "claudeChats.checkOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for orphaned chats when a workspace is opened."
+        },
+        "claudeChats.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the chat count for this workspace in the status bar."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node ../scripts/build-extension.js",
+    "package": "npm run build && npx @vscode/vsce package --no-dependencies"
+  }
+}

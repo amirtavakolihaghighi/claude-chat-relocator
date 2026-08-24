@@ -24,3 +24,7 @@ Thumbs.db
 # local scratch
 tmp/
 scratch/
+
+# extension: lib/ is copied from server/ at package time, .vsix is a build artefact
+extension/lib/
+*.vsix

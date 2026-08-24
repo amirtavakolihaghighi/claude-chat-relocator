@@ -1,0 +1,6 @@
+.vscode/**
+.gitignore
+**/*.map
+
+# The extension loads from lib/, which the build script fills in.
+# src/lib.js falls back to ../../server only when running from the repository.
