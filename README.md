@@ -8,7 +8,7 @@ This puts them back.**
 [![CI](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml/badge.svg)](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-74%20passing-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen.svg)](test/)
 
 Read, relocate and export the chat history the Claude Code VS Code extension
 keeps in `~/.claude/projects`.
@@ -77,6 +77,13 @@ readable, and expand when you want the detail.
 
 ![A session open in the transcript viewer, showing the conversation with collapsed tool calls and a summary of tokens, duration and tool usage](docs/images/transcript.png)
 
+### Open the project you just fixed
+Once a folder points somewhere real again, the obvious next step is to open it.
+Every project row has an Open button that launches the folder in a new editor
+window — VS Code, Cursor, Windsurf, VSCodium, Zed, Sublime and the JetBrains
+IDEs are detected automatically. It stays disabled, with the reason, for a
+project whose folder is not on this machine.
+
 ### Move everything at once
 Set up a new machine, or moved your whole projects directory? Give the old and
 new parent folder — `D:\Files\Projects` → `E:\Dev` — and every chat folder
@@ -127,7 +134,7 @@ Opens `http://127.0.0.1:4317`. Node 20+.
 PORT=4400 npm start                  # different port
 NO_OPEN=1 npm start                  # do not launch a browser
 CLAUDE_PROJECTS_DIR=/some/copy npm start   # read a store from elsewhere
-npm test                             # 74 tests, no real data touched
+npm test                             # 79 tests, no real data touched
 ```
 
 ## Safety

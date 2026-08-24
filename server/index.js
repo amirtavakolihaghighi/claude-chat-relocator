@@ -15,6 +15,7 @@ const { search } = require('./search');
 const AR = require('./archive');
 const { exportHtml } = require('./exporters/html');
 const { exportMarkdown } = require('./exporters/markdown');
+const ED = require('./editors');
 
 const PORT = Number(process.env.PORT || 4317);
 const HOST = '127.0.0.1';     // loopback only: this reads and writes your disk
@@ -291,6 +292,16 @@ app.get('/api/fs/exists', route((req, res) => {
     normalizationDiffers: nfc !== p && P.encodeProjectFolder(nfc) !== encoded,
     nonAscii: /[^\x00-\x7F]/.test(p),
   });
+}));
+
+app.get('/api/editors', route(async (req, res) => {
+  res.json({ editors: await ED.detect(req.query.force === '1') });
+}));
+
+/** Open a project folder in an editor. */
+app.post('/api/fs/open', route(async (req, res) => {
+  const { path: dir, editor, newWindow } = req.body || {};
+  res.json(await ED.open(String(dir || ''), editor || null, newWindow !== false));
 }));
 
 /** Reveal a folder in the OS file manager. */

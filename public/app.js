@@ -114,7 +114,67 @@ const state = {
   session: null,
   showContext: false,
   searchQuery: '',
+  editors: [],              // editors detected on PATH, best first
 };
+
+// ------------------------------------------------------ open in editor ----
+
+/**
+ * Open a project folder in an editor. With one editor installed this is a
+ * single click; with several, it asks which. A folder that is not on this
+ * machine cannot be opened, and the button says so rather than failing.
+ */
+async function openInEditor(projectPath, editorId) {
+  if (!projectPath) return toast('No project path is recorded for these chats.', 'warn');
+  if (!state.editors.length) {
+    return toast(
+      'No supported editor was found on your PATH. In VS Code, run "Shell Command: Install ‘code’ command in PATH" from the command palette, then rescan.',
+      'err', 'Nothing to open with');
+  }
+  if (!editorId && state.editors.length > 1) return pickEditorDialog(projectPath);
+
+  try {
+    const r = await jpost('/api/fs/open', { path: projectPath, editor: editorId || state.editors[0].id, newWindow: true });
+    toast(`${r.path}`, 'ok', `Opening in ${r.editor}`);
+  } catch (e) {
+    toast(e.message, 'err', 'Could not open');
+  }
+}
+
+function pickEditorDialog(projectPath) {
+  const node = modal({
+    title: 'Open in…',
+    sub: projectPath,
+    body: el('div', { class: 'maplist' },
+      ...state.editors.map((ed) => el('button', {
+        class: 'maprow', type: 'button',
+        style: 'text-align:left;cursor:pointer;width:100%',
+        onclick: () => { closeModal(node); openInEditor(projectPath, ed.id); },
+      },
+        el('div', { class: 'mname', text: ed.name }),
+        el('div', { class: 'morig', text: ed.command })))),
+    foot: [el('div', { class: 'spacer' }),
+      el('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: () => closeModal(node) })],
+  });
+  openModal(node);
+}
+
+/** An "Open" button, disabled with a reason when the folder is not there. */
+function openButton(p, cls = 'btn tiny') {
+  const label = state.editors.length === 1 ? `Open in ${state.editors[0].name}` : 'Open project';
+  const missing = p.projectPath && !p.projectExists;
+  return el('button', {
+    class: cls,
+    type: 'button',
+    text: state.editors.length ? label : 'Open project',
+    disabled: missing || !p.projectPath || !state.editors.length,
+    title: missing
+      ? 'That folder is not on this machine. Relocate these chats first.'
+      : !state.editors.length ? 'No supported editor found on your PATH'
+        : `Open ${p.projectPath} in a new window`,
+    onclick: () => openInEditor(p.projectPath),
+  });
+}
 
 // --------------------------------------------------------------- modals ---
 
@@ -294,6 +354,7 @@ function renderSidebar() {
     if (!p.sessions.length) sessions.appendChild(el('div', { class: 'sidenote', text: 'No sessions' }));
 
     sessions.appendChild(el('div', { style: 'padding:6px 12px 2px 24px;display:flex;gap:5px;flex-wrap:wrap' },
+      openButton(p),
       el('button', { class: 'btn tiny', type: 'button', text: 'Relocate…', onclick: () => relocateDialog(p.folderName) }),
       el('button', { class: 'btn tiny', type: 'button', text: 'Archive', onclick: () => downloadArchive([p.folderName]) })));
 
@@ -382,7 +443,8 @@ function renderDashboard() {
           class: 'btn', type: 'button', text: 'Fix the name only',
           onclick: () => applyRelocate(p.folderName, p.projectPath, true),
         }) : null,
-        el('button', { class: 'btn', type: 'button', text: 'Open chats', onclick: () => { state.open.add(p.folderName); renderSidebar(); } })));
+        el('button', { class: 'btn', type: 'button', text: 'Open chats', onclick: () => { state.open.add(p.folderName); renderSidebar(); } }),
+        openButton(p, 'btn')));
 
       sheet.appendChild(node);
     }
@@ -396,7 +458,9 @@ function renderDashboard() {
     el('td', { class: 'num', text: fmtBytes(p.totalSize) }),
     el('td', { text: fmtDate(p.lastActivity) }),
     el('td', {}, p.healthy ? el('span', { style: 'color:var(--ok)', text: 'ok' }) : el('span', {}, ...issueBadges(p))),
-    el('td', {}, el('button', { class: 'btn tiny', type: 'button', text: 'Relocate…', onclick: () => relocateDialog(p.folderName) }))));
+    el('td', {}, el('div', { style: 'display:flex;gap:5px;flex-wrap:wrap' },
+      openButton(p),
+      el('button', { class: 'btn tiny', type: 'button', text: 'Relocate…', onclick: () => relocateDialog(p.folderName) })))));
 
   sheet.appendChild(el('table', { class: 'tbl' },
     el('thead', {}, el('tr', {},
@@ -463,6 +527,7 @@ async function openSession(folder, sessionId) {
         onchange: (e) => { state.showContext = e.target.checked; applyContextFilter(); },
       }), 'Show context events'),
     el('div', { class: 'spacer' }),
+    project ? openButton(project, 'btn') : null,
     el('button', { class: 'btn', type: 'button', text: 'Stats', onclick: () => statsDialog(s) }),
     el('div', { class: 'sep' }),
     el('a', { class: 'btn', href: base + '.html', download: '', text: 'HTML' }),
@@ -1143,7 +1208,11 @@ async function rootDialog() {
 // ----------------------------------------------------------------- boot ---
 
 async function refresh() {
-  const data = await api('/api/projects?force=1');
+  const [data, eds] = await Promise.all([
+    api('/api/projects?force=1'),
+    api('/api/editors').catch(() => ({ editors: [] })),
+  ]);
+  state.editors = eds.editors || [];
   state.root = data.root;
   state.projects = data.projects;
   state.counts = data.counts;

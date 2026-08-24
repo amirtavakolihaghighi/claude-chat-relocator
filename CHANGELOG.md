@@ -5,6 +5,17 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Open a project in your editor** from the app. Every project row, the
+  dashboard table and the chat header get an Open button that launches the
+  folder in a new window. VS Code, VS Code Insiders, Cursor, Windsurf,
+  VSCodium, Zed, Sublime Text, WebStorm and IntelliJ IDEA are detected on your
+  PATH; if more than one is installed the app asks which. The button is
+  disabled, with the reason, for a project whose folder is not on this machine.
+
 ## [1.0.1] - 2026-08-23
 
 ### Fixed
