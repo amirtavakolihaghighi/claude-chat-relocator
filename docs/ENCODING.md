@@ -77,14 +77,14 @@ C:\Quiz\کوییز\4- Working   ->   c--Quiz-------4--Working
                                         1 + 5 + 1 = 7 dashes
 ```
 
-A real example, verified end to end:
+A deeper example, modelled on a real folder name and verified end to end:
 
 ```
-C:\Users\Amir-TH Laptop\Documents\Files\Documents\Jobs\Quiz\کوییز\
-   4- Working\Qok\Work\LiveOps\Seasons\TBM - Season 75\Worldcup Survey
+C:\Users\Sara\Documents\Files\Archive\Notes\Quiz\کوییز\
+   4- Working\Team\App\Live\Seasons\Cycle 75 - Winter\Survey Tool
 
-c--Users-Amir-TH-Laptop-Documents-Files-Documents-Jobs-Quiz-------4--Working-
-Qok-Work-LiveOps-Seasons-TBM---Season-75-Worldcup-Survey
+c--Users-Sara-Documents-Files-Archive-Notes-Quiz-------4--Working-
+Team-App-Live-Seasons-Cycle-75---Winter-Survey-Tool
 ```
 
 This works correctly, but it has three consequences worth knowing about.

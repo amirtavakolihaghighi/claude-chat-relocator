@@ -44,11 +44,13 @@ test('trailing separators are ignored', () => {
 // five-letter Persian folder name becomes five dashes.
 
 test('Persian paths encode one dash per character', () => {
-  // Verified against a real folder name from a Windows machine.
-  const full = 'C:\\Users\\Amir-TH Laptop\\Documents\\Files\\Documents\\Jobs\\Quiz\\'
-    + 'کوییز\\4- Working\\Qok\\Work\\LiveOps\\Seasons\\TBM - Season 75\\Worldcup Survey';
-  const expected = 'c--Users-Amir-TH-Laptop-Documents-Files-Documents-Jobs-Quiz-------'
-    + '4--Working-Qok-Work-LiveOps-Seasons-TBM---Season-75-Worldcup-Survey';
+  // Modelled on a real folder name from a Windows machine, with the naming
+  // anonymised. The shape that matters is intact: sixteen segments, a
+  // five-character Persian one, spaces, and literal dashes inside a segment.
+  const full = 'C:\\Users\\Sara\\Documents\\Files\\Archive\\Notes\\Quiz\\'
+    + 'کوییز\\4- Working\\Team\\App\\Live\\Seasons\\Cycle 75 - Winter\\Survey Tool';
+  const expected = 'c--Users-Sara-Documents-Files-Archive-Notes-Quiz-------'
+    + '4--Working-Team-App-Live-Seasons-Cycle-75---Winter-Survey-Tool';
   assert.equal(P.encodeProjectFolder(full), expected);
 });
 
