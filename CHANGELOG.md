@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Links from one entry of [docs/HELP.md](docs/HELP.md) to a message code
+  (for example from Relocate to W-LIVE) went nowhere when the guide was read
+  on GitHub. The app now names its help headings the way GitHub does, so the
+  same links work in both places, and a test checks every link by GitHub's
+  rule.
+
 ## [2.0.0] - 2026-11-19
 
 The app grows from a relocation tool into a reader and permanent archive for

@@ -240,9 +240,9 @@ project was. You can still read them. Relocate needs a recorded path.
   - A full backup is made first, and [Undo history](#undo-history) can put it
     all back.
   - **Close VS Code windows that have this project open first.** VS Code may
-    write the old path back while you relocate (see [W-LIVE](#w-live)).
+    write the old path back while you relocate (see [W-LIVE](#w-live-a-chat-changed-in-the-last-90-seconds)).
   - The new folder does not have to exist yet; you'll get a warning
-    ([W-NO-FOLDER](#w-no-folder)).
+    ([W-NO-FOLDER](#w-no-folder-the-new-folder-does-not-exist-yet)).
 
 Choose the project folder itself, the one you open in VS Code: type it, or use
 **Browse…**.
@@ -279,7 +279,7 @@ copied everything to a new computer.
   says how many. Nothing changes until you press **Relocate them all**.
 - **Good to know:** each project gets its own backup and its own Undo entry. A
   batch where two projects would end up with the same folder name is refused
-  before anything runs ([E-BULK-COLLIDE](#e-bulk-collide)).
+  before anything runs ([E-BULK-COLLIDE](#e-bulk-collide-two-projects-would-get-the-same-folder-name)).
 
 ### Undo history
 
@@ -302,8 +302,8 @@ Cursor, Windsurf, VSCodium, Zed, Sublime Text and JetBrains IDEs are found
 automatically. With more than one installed, the app asks which.
 
 The button is greyed out, with the reason when you point at it, when the
-folder is not on this computer ([E-OPEN-MISSING](#e-open-missing)), or when no
-editor was found ([E-NO-EDITOR](#e-no-editor)).
+folder is not on this computer ([E-OPEN-MISSING](#e-open-missing-the-folder-is-not-on-this-computer)), or when no
+editor was found ([E-NO-EDITOR](#e-no-editor-no-editor-found)).
 
 ## Moving chats between computers
 
@@ -329,7 +329,7 @@ editor was found ([E-NO-EDITOR](#e-no-editor)).
   - A zip without the note of paths still works. The paths are worked out from
     the chats themselves, so check them.
   - An uploaded zip waits for a day; after that, choose it again
-    ([E-ZIP-EXPIRED](#e-zip-expired)).
+    ([E-ZIP-EXPIRED](#e-zip-expired-the-upload-has-expired)).
 
 ## The archive
 
@@ -373,7 +373,7 @@ On the **Archive** page:
   - Choose a folder on **another drive** if you can, and never a public or
     shared one: your chats are private.
   - The archive cannot be inside Claude Code's own chat folder
-    ([E-ARCHIVE-INSIDE](#e-archive-inside)).
+    ([E-ARCHIVE-INSIDE](#e-archive-inside-the-archive-is-in-the-wrong-place)).
   - If you already copied chats by hand, give that folder as the **old backup**
     and it is taken in too. See [Importing an old backup](#importing-an-old-backup).
 

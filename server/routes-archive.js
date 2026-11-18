@@ -159,20 +159,31 @@ function memoryRel(folder, name) {
 
 // ------------------------------------------------------------------- help --
 
+/** GitHub's heading anchors: lower case, punctuation dropped, each space a dash. */
+function githubSlug(text) {
+  return String(text).toLowerCase().trim().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
+}
+
+function decodeEntities(s) {
+  return String(s).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
 let helpCache = null;
 function helpPage() {
   const file = path.join(__dirname, '..', 'docs', 'HELP.md');
   const st = fs.statSync(file);
   if (helpCache && helpCache.mtimeMs === st.mtimeMs) return helpCache.page;
   const text = fs.readFileSync(file, 'utf8');
-  const slug = (s) => String(s).toLowerCase().replace(/<[^>]+>/g, '').replace(/&[a-z]+;/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const toc = [];
   const html = R.md(text).replace(/<h([23])>([\s\S]*?)<\/h\1>/g, (all, level, inner) => {
-    // a message's own heading ("W-LIVE: ...") is reached by its code alone
-    const code = /^([EW]-[A-Z0-9-]+)/.exec(inner.replace(/<[^>]+>/g, ''));
-    const id = code ? code[1].toLowerCase() : slug(inner);
-    if (level === '2') toc.push({ id, title: inner.replace(/<[^>]+>/g, '') });
-    return `<h${level} id="${id}">${inner}</h${level}>`;
+    // The same ids GitHub gives these headings, so a link like
+    // [W-LIVE](#w-live-a-chat-changed-...) works in both places. A message's
+    // heading can also be found by its code alone, from the app's links.
+    const plain = decodeEntities(inner.replace(/<[^>]+>/g, ''));
+    const id = githubSlug(plain);
+    const code = /^([EW]-[A-Z0-9-]+)/.exec(plain);
+    if (level === '2') toc.push({ id, title: plain });
+    return `<h${level} id="${id}"${code ? ` data-code="${code[1].toLowerCase()}"` : ''}>${inner}</h${level}>`;
   });
   // links to another section, [text](#anchor), are kept inside the help page by the app
   const page = { html, toc };

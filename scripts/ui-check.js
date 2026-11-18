@@ -167,7 +167,7 @@ async function main() {
     });
     await step('help opens at a message code, in the side panel and as a page', async () => {
       await evaluate("location.hash = '#help/w-live'");
-      await until("document.querySelector('.helpdoc #w-live')", 'help page');
+      await until("document.querySelector('.helpdoc [data-code=\"w-live\"]')", 'help page');
       await evaluate("location.hash = '#home'");
       await until("document.querySelector('.tiles')", 'home again');
       await evaluate("document.querySelector('#helpBtn').click()");

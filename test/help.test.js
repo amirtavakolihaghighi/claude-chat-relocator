@@ -13,18 +13,23 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
-/** Anchor ids the help page gives its headings (same rule as routes-archive.js). */
+/**
+ * The anchors of the help's headings, by GitHub's rule -- the app uses the
+ * same one, so a link works in both places -- plus each message heading's
+ * code, which the app can also look up.
+ */
 function anchors() {
   const ids = new Set();
+  const codes = new Set();
   for (const line of read('docs/HELP.md').split(/\r?\n/)) {
     const m = /^(##|###) (.+)$/.exec(line);
     if (!m) continue;
     const text = m[2].replace(/`/g, '');
+    ids.add(text.toLowerCase().trim().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-'));
     const code = /^([EW]-[A-Z0-9-]+)/.exec(text);
-    ids.add(code ? code[1].toLowerCase()
-      : text.toLowerCase().replace(/&[a-z]+;/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+    if (code) codes.add(code[1].toLowerCase());
   }
-  return ids;
+  return { ids, codes };
 }
 
 /** Every message code the server can send. */
@@ -39,15 +44,15 @@ function serverCodes() {
 }
 
 test('every message code the server sends has its own entry in the help', () => {
-  const ids = anchors();
+  const { codes: documented } = anchors();
   const codes = serverCodes();
   assert.ok(codes.size > 20, `expected many codes, found ${codes.size}`);
-  const missing = [...codes].filter((c) => !ids.has(c.toLowerCase()));
+  const missing = [...codes].filter((c) => !documented.has(c.toLowerCase()));
   assert.deepEqual(missing, []);
 });
 
 test('every help topic the app links to exists in the help', () => {
-  const ids = anchors();
+  const { ids, codes } = anchors();
   const app = read('public/app.js');
   const block = /const HELP = \{([\s\S]*?)\};/.exec(app);
   assert.ok(block, 'the HELP table in app.js');
@@ -56,12 +61,12 @@ test('every help topic the app links to exists in the help', () => {
   for (const m of app.matchAll(/(?:helpLink|openHelp)\('([a-z0-9-]+)'/g)) topics.push(m[1]);
   for (const m of app.matchAll(/noticeBox\([^)]*?'([ew]-[a-z0-9-]+)'\)/g)) topics.push(m[1]);
   topics.push('getting-started');
-  const missing = [...new Set(topics)].filter((t) => !ids.has(t));
+  const missing = [...new Set(topics)].filter((t) => !ids.has(t) && !codes.has(t));
   assert.deepEqual(missing, []);
 });
 
-test('links inside the help point at sections that exist', () => {
-  const ids = anchors();
+test('links inside the help point at sections that exist, on GitHub as well as in the app', () => {
+  const { ids } = anchors();
   const links = [...read('docs/HELP.md').matchAll(/\]\(#([a-z0-9-]+)\)/g)].map((m) => m[1]);
   assert.ok(links.length > 10);
   const broken = [...new Set(links)].filter((l) => !ids.has(l));

@@ -203,7 +203,8 @@ async function openHelp(anchor) {
 
 function scrollHelpTo(container, anchor) {
   if (!anchor) { container.scrollTop = 0; return; }
-  const target = container.querySelector('#' + CSS.escape(String(anchor).toLowerCase()));
+  const a = String(anchor).toLowerCase();
+  const target = container.querySelector('#' + CSS.escape(a)) || container.querySelector(`[data-code="${CSS.escape(a)}"]`);
   if (!target) return;
   target.scrollIntoView({ block: 'start' });
   target.classList.remove('flash');
