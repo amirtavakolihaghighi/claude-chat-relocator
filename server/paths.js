@@ -11,7 +11,7 @@ const SEP = IS_WIN ? '\\' : '/';
  * project's absolute path: it lowercases the drive letter, then replaces every
  * non-alphanumeric character with a dash.
  *
- *   D:\Files\Projects\AI_Chat_Extractor  ->  d--Files-Projects-AI-Chat-Extractor
+ *   D:\Files\Projects\Recipe_Box_Notes  ->  d--Files-Projects-Recipe-Box-Notes
  *   (the double dash is ':' followed by '\')
  *
  * Verified against every folder/cwd pair in a real ~/.claude/projects tree.

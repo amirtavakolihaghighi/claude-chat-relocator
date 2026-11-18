@@ -6,14 +6,15 @@ const P = require('../server/paths');
 const WIN = process.platform === 'win32';
 
 test('encodeProjectFolder reproduces real Claude Code folder names', () => {
-  // Every pair below was taken from a live ~/.claude/projects tree.
+  // Every pair below mirrors a real folder/path pair from a live
+  // ~/.claude/projects tree, with the project names replaced by invented ones.
   const cases = [
-    ['D:\\Files\\Projects\\AI_Chat_Extractor', 'd--Files-Projects-AI-Chat-Extractor'],
-    ['d:\\Files\\Projects\\Digital_Hardware_Share', 'd--Files-Projects-Digital-Hardware-Share'],
-    ['D:\\Files\\Projects\\Home_Gym_App', 'd--Files-Projects-Home-Gym-App'],
-    ['D:\\Files\\Projects\\Photo_Similarity_Detector', 'd--Files-Projects-Photo-Similarity-Detector'],
-    ['D:\\Files\\Projects\\WindowsDNSChanger', 'd--Files-Projects-WindowsDNSChanger'],
-    ['d:\\Files\\Projects\\WindowsDNSChanger\\V2RayIssue', 'd--Files-Projects-WindowsDNSChanger-V2RayIssue'],
+    ['D:\\Files\\Projects\\Recipe_Box_Notes', 'd--Files-Projects-Recipe-Box-Notes'],
+    ['d:\\Files\\Projects\\Garden_Planner_App', 'd--Files-Projects-Garden-Planner-App'],
+    ['D:\\Files\\Projects\\Book_Club_App', 'd--Files-Projects-Book-Club-App'],
+    ['D:\\Files\\Projects\\Photo_Album_Viewer', 'd--Files-Projects-Photo-Album-Viewer'],
+    ['D:\\Files\\Projects\\NetworkHelper', 'd--Files-Projects-NetworkHelper'],
+    ['d:\\Files\\Projects\\NetworkHelper\\ProxyIssue', 'd--Files-Projects-NetworkHelper-ProxyIssue'],
   ];
   for (const [input, expected] of cases) {
     assert.equal(P.encodeProjectFolder(input), expected, input);

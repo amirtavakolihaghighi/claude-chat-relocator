@@ -15,12 +15,12 @@ That is the entire rule. There is no escaping, no hashing, no length limit
 handling.
 
 ```
-D:\Files\Projects\AI_Chat_Extractor   ->   d--Files-Projects-AI-Chat-Extractor
+D:\Files\Projects\Recipe_Box_Notes   ->   d--Files-Projects-Recipe-Box-Notes
 ```
 
 The leading `d--` is the drive letter, then `:` becomes a dash, then `\`
-becomes another. Underscores become dashes too, which is why `AI_Chat_Extractor`
-reads as `AI-Chat-Extractor`.
+becomes another. Underscores become dashes too, which is why `Recipe_Box_Notes`
+reads as `Recipe-Box-Notes`.
 
 Case is preserved everywhere except the drive letter. Spaces, dots, and dashes
 are all just "not alphanumeric", so they all become dashes.
