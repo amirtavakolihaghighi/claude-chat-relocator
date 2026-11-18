@@ -2,12 +2,24 @@
 
 ## What this tool touches
 
-It reads and writes two places on your machine:
+It reads and writes these places on your machine:
 
 - `~/.claude/projects` — your Claude Code chat history. It renames folders here
-  and rewrites `cwd` fields inside `.jsonl` files.
-- `~/.claude-chat-relocator` — its own backups, operation history, and
-  temporarily staged zip uploads.
+  and rewrites `cwd` fields inside `.jsonl` files when you relocate, and
+  copies chats back into it when you put them back from the archive. It never
+  overwrites a file that is already there.
+- **The archive folder you choose** — a full copy of every chat and memory
+  file, with earlier versions. Nothing in it is ever deleted by the app. It
+  holds your conversations as plain text: put it somewhere private.
+- `~/.claude/settings.json` — **only if you turn on automatic saving**. Three
+  hook entries are added (`Stop`, `PreCompact`, `SessionEnd`) that run
+  `server/vault-hook.js` with the Node.js you started the app with. Every other
+  setting and hook is left as it was, a copy of the file is kept first, and a
+  file that is not valid JSON is never written. Turning automatic saving off
+  removes exactly those entries.
+- `~/.claude-chat-relocator` — its own settings, backups, operation history,
+  temporarily staged zip uploads, copies of the Claude Code settings file, and a
+  log of failed automatic saves.
 
 It does not modify your actual project files, and it never sends anything
 anywhere. There is no telemetry, no update check, and no network call of any
@@ -21,6 +33,11 @@ make HTTP requests from your machine can, while the app is running:
 - list directories on your disk (`/api/fs/browse`)
 - read any chat transcript in the configured store
 - rename chat folders and rewrite their contents
+- read the archive and copy chats from it back into the store
+- add or remove the automatic-saving hook in Claude Code's settings
+
+The hook itself runs a fixed command — this copy of the app, with no input
+taken from the chat — and exits at once; the save runs in the background.
 
 That is acceptable for a local single-user tool and is the same authority a
 script you ran yourself would have. It is **not** safe to expose to a network.
