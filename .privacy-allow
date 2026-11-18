@@ -1,0 +1,4 @@
+# Findings accepted on purpose: "<file glob> <kind>". Never put the value here.
+# Invented example paths that show how a Windows user folder encodes.
+docs/ENCODING.md        home-path
+test/*.test.js          home-path

@@ -9,42 +9,42 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same branch makes an older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: test (node ${{ matrix.node }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         node: ['20', '22', '24']
-
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test
+      - run: npm ci
+      - run: npm test
 
   smoke:
     name: server starts and serves
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - run: npm ci
-
-      - name: Boot the server and check the API answers
+      - name: Boot the server and check every entry point answers
         env:
           NO_OPEN: '1'
           PORT: '4317'
@@ -58,4 +58,44 @@ jobs:
           curl -sf http://127.0.0.1:4317/ > /dev/null
           curl -sf http://127.0.0.1:4317/app.js > /dev/null
           curl -sf http://127.0.0.1:4317/transcript.css > /dev/null
+          curl -sf http://127.0.0.1:4317/api/help > /dev/null
           kill %1
+
+  ui:
+    name: the app in a real browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      # Builds the demo store, drives every page in headless Chrome, and fails
+      # on any error the page reports. Chrome comes with the runner.
+      - run: node scripts/ui-check.js --shots ui-shots
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-shots
+          path: ui-shots
+
+  privacy:
+    name: privacy scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Files
+        run: node scripts/privacy-scan.js
+      # Runs after the push, so it can only report. The pre-push hook in
+      # .githooks is what stops a leak from leaving the machine.
+      - name: Commits in this push
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: node scripts/privacy-scan.js --range "${{ github.event.before }}..${{ github.sha }}"

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Refuse a push that would publish personal data. See scripts/privacy-scan.js.
+# Turn it on once per clone:  git config core.hooksPath .githooks
+exec node "$(git rev-parse --show-toplevel)/scripts/privacy-scan.js" --push
