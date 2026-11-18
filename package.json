@@ -1,7 +1,7 @@
 {
   "name": "claude-chat-relocator",
-  "version": "1.1.0",
-  "description": "Read, relocate and export the Claude Code chat histories stored in ~/.claude/projects. Repoints chats at a project after you move it, so the VS Code extension finds them again.",
+  "version": "2.0.0",
+  "description": "Read every Claude Code chat outside VS Code, keep all of them in a permanent archive, and bring back chats VS Code can no longer find after you move a project.",
   "keywords": [
     "claude",
     "claude-code",
@@ -11,7 +11,9 @@
     "transcript",
     "jsonl",
     "export",
-    "backup"
+    "backup",
+    "archive",
+    "chat-archive"
   ],
   "homepage": "https://github.com/amirtavakolihaghighi/claude-chat-relocator#readme",
   "bugs": {
@@ -31,6 +33,7 @@
   "files": [
     "server/",
     "public/",
+    "docs/HELP.md",
     "README.md",
     "LICENSE"
   ],
@@ -38,7 +41,11 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "test": "node --test",
-    "test:watch": "node --test --watch"
+    "test:watch": "node --test --watch",
+    "demo": "node scripts/demo-store.js",
+    "check:ui": "node scripts/ui-check.js",
+    "check:privacy": "node scripts/privacy-scan.js",
+    "archive": "node server/vault-cli.js"
   },
   "engines": {
     "node": ">=20.0.0"
