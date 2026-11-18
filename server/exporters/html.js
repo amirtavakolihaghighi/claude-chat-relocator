@@ -1,5 +1,6 @@
 'use strict';
 const R = require('../render');
+const V = require('../view');
 const { transcriptCss } = require('../theme');
 
 /**
@@ -7,53 +8,39 @@ const { transcriptCss } = require('../theme');
  *
  * Images are inlined as data URIs and the stylesheet is embedded, so the file
  * still renders identically years from now on a machine that has never heard of
- * this app. Ctrl+P produces a clean PDF -- a beforeprint hook opens every
- * collapsed section first so nothing silently vanishes from the printout.
+ * this app. It has the same view as the app -- grouped steps, marked answers,
+ * a "Conversation only" switch, light and dark. Ctrl+P makes a clean PDF: a
+ * beforeprint hook opens every folded section first so nothing goes missing.
  */
 
 const SHELL_CSS = `
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0; background: var(--bg); color: var(--text);
-  font-family: var(--sans); line-height: 1.6;
-}
-.page { max-width: 900px; margin: 0 auto; padding: 28px 24px 96px; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; }
+.page { max-width: 880px; margin: 0 auto; padding: 32px 28px 96px; }
 
-.doc-head { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 26px; }
-.doc-head h1 { margin: 0 0 10px; font-size: 23px; line-height: 1.3; font-weight: 680; letter-spacing: -.01em; }
-.doc-path {
-  font-family: var(--mono); font-size: 12.4px; color: var(--text-dim);
-  word-break: break-all; margin: 0 0 14px;
-}
-.facts { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 0; padding: 0; list-style: none; }
-.fact {
-  font-size: 11.5px; color: var(--text-dim); background: var(--bg-sunk);
-  border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px;
-}
-.fact b { color: var(--text); font-weight: 650; }
+.doc-head { border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 8px; }
+.doc-head h1 { margin: 0 0 6px; font-size: 26px; line-height: 1.3; font-weight: 700; letter-spacing: -.01em; }
+.doc-path { font-family: var(--mono); font-size: 13.5px; color: var(--text-2); word-break: break-all; margin: 0 0 12px; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; font-size: 14px; color: var(--text-2); }
+.facts b { color: var(--text); font-weight: 650; }
 
 .bar {
-  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-  margin: 0 0 22px; padding: 10px 0; border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; background: var(--bg); z-index: 5;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 26px; padding: 12px 0;
+  border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5;
 }
 .bar button {
-  font: 600 12px/1 var(--sans); color: var(--text-dim); cursor: pointer;
-  background: var(--panel); border: 1px solid var(--border-2);
-  border-radius: 6px; padding: 7px 11px;
+  font: 600 13.5px/1 var(--sans); color: var(--text); cursor: pointer; background: var(--surface);
+  border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 12px;
 }
-.bar button:hover { color: var(--text); border-color: var(--text-faint); }
+.bar button:hover { background: var(--hover); }
+.bar button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .bar .spacer { flex: 1; }
-.bar .count { font-size: 11.5px; color: var(--text-faint); }
 
-.doc-foot {
-  margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
-  font-size: 11.5px; color: var(--text-faint);
-}
+.doc-foot { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-3); }
 .doc-foot code { font-family: var(--mono); }
 
-@media (max-width: 640px) { .page { padding: 18px 14px 60px; } }
+@media (max-width: 640px) { .page { padding: 18px 14px 60px; } .msg { grid-template-columns: 1fr; } .avatar { display: none; } .event { margin-left: 0; } }
 @media print { .page { max-width: none; padding: 0; } .bar { display: none; } }
 `;
 
@@ -63,45 +50,53 @@ const SCRIPT = `
   var saved = null;
   try { saved = localStorage.getItem('ccx-theme'); } catch (e) {}
   if (saved) root.setAttribute('data-theme', saved);
+  var transcript = document.querySelector('.transcript');
 
   document.addEventListener('click', function (e) {
     var t = e.target;
     if (!(t instanceof Element)) return;
+    var b = t.closest('[data-copy],[data-more],[data-act]');
+    if (!b) return;
 
-    if (t.hasAttribute('data-copy')) {
-      var wrap = t.closest('.codewrap');
+    if (b.hasAttribute('data-copy')) {
+      var wrap = b.closest('.codewrap');
       var code = wrap && wrap.querySelector('code');
       if (!code) return;
       navigator.clipboard.writeText(code.innerText).then(function () {
-        var was = t.textContent; t.textContent = 'Copied';
-        setTimeout(function () { t.textContent = was; }, 1200);
+        var was = b.textContent; b.textContent = 'Copied';
+        setTimeout(function () { b.textContent = was; }, 1200);
       }, function () {});
       return;
     }
-
-    var act = t.getAttribute('data-act');
+    if (b.hasAttribute('data-more')) {
+      var bub = b.closest('.bubble');
+      var on = bub.classList.toggle('expanded');
+      b.textContent = on ? 'Show less' : 'Show the whole message';
+      return;
+    }
+    var act = b.getAttribute('data-act');
     if (act === 'expand' || act === 'collapse') {
       var open = act === 'expand';
       document.querySelectorAll('.transcript details').forEach(function (d) { d.open = open; });
-      return;
-    }
-    if (act === 'theme') {
+    } else if (act === 'convo') {
+      var only = transcript.classList.toggle('convo-only');
+      b.setAttribute('aria-pressed', only ? 'true' : 'false');
+    } else if (act === 'theme') {
       var now = root.getAttribute('data-theme');
-      var next = now === 'dark' ? 'light' : now === 'light' ? '' : 'dark';
-      if (next) root.setAttribute('data-theme', next); else root.removeAttribute('data-theme');
-      try { next ? localStorage.setItem('ccx-theme', next) : localStorage.removeItem('ccx-theme'); } catch (e) {}
-      return;
+      var dark = now ? now === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      var next = dark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('ccx-theme', next); } catch (e) {}
+    } else if (act === 'print') {
+      window.print();
     }
-    if (act === 'print') { window.print(); return; }
   });
 
-  // Print the whole conversation, not just what happens to be expanded.
+  // Print the whole conversation, not just what happens to be open.
   var reopened = [];
   window.addEventListener('beforeprint', function () {
     reopened = [];
-    document.querySelectorAll('.transcript details:not([open])').forEach(function (d) {
-      d.open = true; reopened.push(d);
-    });
+    document.querySelectorAll('.transcript details:not([open])').forEach(function (d) { d.open = true; reopened.push(d); });
   });
   window.addEventListener('afterprint', function () {
     reopened.forEach(function (d) { d.open = false; });
@@ -132,7 +127,7 @@ function fmtNum(n) {
 /**
  * @param {object} session   parsed session
  * @param {Map}    imageStore ref -> { mediaType, data }
- * @param {object} opts      includeSystem, expandTools
+ * @param {object} opts      includeSystem, expandTools, conversationOnly
  */
 function exportHtml(session, imageStore, opts = {}) {
   const includeSystem = opts.includeSystem !== false;
@@ -144,29 +139,27 @@ function exportHtml(session, imageStore, opts = {}) {
     return `data:${img.mediaType || mediaType || 'image/png'};base64,${img.data}`;
   };
 
-  const turns = includeSystem
-    ? session.turns
-    : session.turns.filter((t) => !(t.kind === 'system' && t.category === 'context'));
+  const view = includeSystem
+    ? session
+    : { ...session, turns: session.turns.filter((t) => !(t.kind === 'system' && t.category === 'context')) };
 
-  let body = turns.map((t) => R.renderTurn(t, { imageSrc })).join('\n');
-  if (opts.expandTools) body = body.replace(/<details class="tool"/g, '<details class="tool" open');
+  let body = V.renderItems(view, { imageSrc }).map((x) => x.html).join('\n');
+  if (opts.expandTools) body = body.replace(/<details class="(steps|step|card edit)"/g, '<details class="$1" open');
 
   const s = session.stats || {};
   const facts = [];
   if (session.startedAt) facts.push(['Started', R.fmtTime(session.startedAt)]);
   if (session.durationMs) facts.push(['Duration', fmtDuration(session.durationMs)]);
-  facts.push(['Messages', `${fmtNum(s.humanTurns)} you / ${fmtNum(s.assistantTurns)} Claude`]);
-  if (s.toolCalls) facts.push(['Tool calls', fmtNum(s.toolCalls)]);
-  if (s.tokens && s.tokens.output) facts.push(['Output tokens', fmtNum(s.tokens.output)]);
+  facts.push(['Your messages', fmtNum(s.humanTurns)]);
+  if (s.answers) facts.push(["Claude's answers", fmtNum(s.answers)]);
+  if (s.toolCalls) facts.push(['Steps', fmtNum(s.toolCalls)]);
   const model = Object.keys(s.models || {}).filter((m) => m && m !== '<synthetic>')[0];
   if (model) facts.push(['Model', model]);
   if (session.gitBranch) facts.push(['Branch', session.gitBranch]);
-  if (s.apiErrors) facts.push(['API errors', fmtNum(s.apiErrors)]);
-  facts.push(['Source', fmtBytes(session.sizeBytes)]);
+  if (s.apiErrors) facts.push(['Connection problems', fmtNum(s.apiErrors)]);
 
-  const factsHtml = facts
-    .map(([k, v]) => `<li class="fact">${esc(k)} <b>${esc(String(v))}</b></li>`)
-    .join('');
+  const factsHtml = facts.map(([k, v]) => `<li>${esc(k)} <b>${esc(String(v))}</b></li>`).join('');
+  const only = !!opts.conversationOnly;
 
   return `<!doctype html>
 <html lang="en">
@@ -181,6 +174,7 @@ ${SHELL_CSS}
 </style>
 </head>
 <body>
+${V.ICON_SPRITE}
 <div class="page">
   <header class="doc-head">
     <h1>${esc(session.title || 'Claude chat')}</h1>
@@ -189,21 +183,21 @@ ${SHELL_CSS}
   </header>
 
   <div class="bar noprint">
-    <button type="button" data-act="expand">Expand all</button>
-    <button type="button" data-act="collapse">Collapse all</button>
-    <button type="button" data-act="print">Save as PDF</button>
+    <button type="button" data-act="convo" aria-pressed="${only}">Conversation only</button>
+    <button type="button" data-act="expand">Open every step</button>
+    <button type="button" data-act="collapse">Fold every step</button>
     <span class="spacer"></span>
-    <span class="count">${turns.length} entries</span>
-    <button type="button" data-act="theme">Theme</button>
+    <button type="button" data-act="theme">Light / dark</button>
+    <button type="button" data-act="print">Save as PDF</button>
   </div>
 
-  <main class="transcript">
+  <main class="transcript${only ? ' convo-only' : ''}">
 ${body}
   </main>
 
   <footer class="doc-foot">
     Exported ${esc(R.fmtTime(new Date().toISOString()))} from
-    <code>${esc(session.sessionId)}.jsonl</code>${session.parseErrors && session.parseErrors.length
+    <code>${esc(session.sessionId)}.jsonl</code> (${esc(fmtBytes(session.sizeBytes))})${session.parseErrors && session.parseErrors.length
       ? ` &middot; ${session.parseErrors.length} unreadable line(s) skipped` : ''}
   </footer>
 </div>

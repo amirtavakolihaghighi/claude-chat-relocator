@@ -16,6 +16,8 @@ const AR = require('./archive');
 const { exportHtml } = require('./exporters/html');
 const { exportMarkdown } = require('./exporters/markdown');
 const ED = require('./editors');
+const V = require('./view');
+const AR2 = require('./routes-archive');
 
 const PORT = Number(process.env.PORT || 4317);
 const HOST = '127.0.0.1';     // loopback only: this reads and writes your disk
@@ -32,6 +34,7 @@ const route = (fn) => (req, res) => {
     if (res.headersSent) return;
     res.status(err.status || 500).json({
       error: err.message || 'Internal error',
+      help: err.help || null,     // a code from docs/HELP.md, e.g. E-TARGET-EXISTS
       plan: err.plan,
     });
   });
@@ -60,7 +63,7 @@ app.post('/api/root', route((req, res) => {
 
 app.get('/api/projects', route((req, res) => {
   const scan = store.scan(req.query.force === '1');
-  res.json({
+  res.json(AR2.mergeArchived(store, {
     root: scan.root,
     exists: scan.exists,
     scannedAt: scan.scannedAt,
@@ -89,7 +92,7 @@ app.get('/api/projects', route((req, res) => {
         sizeBytes: s.sizeBytes, unreadable: s.unreadable || null,
       })),
     })),
-  });
+  }));
 }));
 
 // -------------------------------------------------------------- sessions ---
@@ -99,15 +102,13 @@ app.get('/api/session/:folder/:id', route((req, res) => {
   const { session, imageStore } = store.loadSession(folder, id);
   const imageSrc = (ref) => `/api/img/${encodeURIComponent(folder)}/${encodeURIComponent(id)}/${encodeURIComponent(ref)}`;
 
-  const turns = session.turns.map((t) => ({
-    i: t.index,
-    kind: t.kind,
-    category: t.category || null,
-    timestamp: t.timestamp || null,
-    html: R.renderTurn(t, { imageSrc }),
-  }));
-
-  res.json({ session: Store.toClientSession(session), turns });
+  // The conversation view: your messages, Claude's replies with their steps
+  // folded, answers marked. See view.js.
+  const items = V.renderItems(session, { imageSrc });
+  const client = Store.toClientSession(session);
+  const vault = AR2.currentVault();
+  client.inArchive = !!(vault && vault.exists() && vault.versionsOf(`${folder}/${id}.jsonl`));
+  res.json({ session: client, items, sprite: V.ICON_SPRITE });
 }));
 
 app.get('/api/session/:folder/:id/meta', route((req, res) => {
@@ -136,6 +137,7 @@ app.get('/api/export/:folder/:id.:fmt', route((req, res) => {
     includeSystem: req.query.system !== '0',
     includeTools: req.query.tools !== '0',
     expandTools: req.query.expand === '1',
+    conversationOnly: req.query.convo === '1',
   };
 
   if (fmt === 'html') {
@@ -167,7 +169,9 @@ app.get('/api/export/:folder/:id.:fmt', route((req, res) => {
 app.get('/api/print/:folder/:id', route((req, res) => {
   const { session, imageStore } = store.loadSession(req.params.folder, req.params.id);
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(exportHtml(session, imageStore, { includeSystem: req.query.system !== '0', expandTools: true }));
+  res.send(exportHtml(session, imageStore, {
+    includeSystem: req.query.system !== '0', expandTools: req.query.convo !== '1', conversationOnly: req.query.convo === '1',
+  }));
 }));
 
 // ------------------------------------------------------------ relocation ---
@@ -313,6 +317,10 @@ app.post('/api/fs/reveal', route((req, res) => {
   execFile(cmd, [p], () => { /* explorer exits non-zero even on success */ });
   res.json({ ok: true });
 }));
+
+// ------------------------------------------------- archive, memory, help ---
+
+AR2.register(app, store, route);
 
 // ----------------------------------------------------------------- static --
 

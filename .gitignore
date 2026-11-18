@@ -31,3 +31,15 @@ scratch/
 # extension: lib/ is copied from server/ at package time, .vsix is a build artefact
 extension/lib/
 *.vsix
+
+# your own chat data, kept inside this folder on purpose: never commit it
+/archive/
+/manual-backups/
+
+# local notes and drafts that are not part of the project
+/prompts/
+/design-preview/
+desktop.ini
+
+# local list of values the privacy scan must refuse
+/.privacy-blocklist

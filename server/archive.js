@@ -126,6 +126,7 @@ function inspectArchive(store, buffer) {
   try { zip = new AdmZip(buffer); }
   catch (e) {
     const err = new Error('That file is not a readable zip archive');
+    err.help = 'E-ZIP-BAD';
     err.status = 400;
     throw err;
   }
@@ -203,6 +204,7 @@ function inspectArchive(store, buffer) {
   if (!projects.length) {
     fs.rmSync(stage, { recursive: true, force: true });
     const err = new Error('No chat folders found in that archive. Expected folders containing .jsonl session files.');
+    err.help = 'E-ZIP-EMPTY';
     err.status = 400;
     throw err;
   }
@@ -231,6 +233,7 @@ function applyImport(store, stagingId, mappings) {
   const stage = path.join(stagingDir(), stagingId);
   if (!P.dirExists(stage)) {
     const err = new Error('That upload has expired. Choose the zip again.');
+    err.help = 'E-ZIP-EXPIRED';
     err.status = 410;
     throw err;
   }

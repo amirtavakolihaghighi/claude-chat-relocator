@@ -283,12 +283,14 @@ function renderTurn(turn, opts) {
     + `<div class="sline">${inner}</div>${body}</article>`;
 }
 
+/** The whole chat as HTML. view.js decides how records become a conversation. */
 function renderTranscript(session, opts) {
-  return session.turns.map((t) => renderTurn(t, opts)).join('\n');
+  return require('./view').renderItems(session, opts).map((x) => x.html).join('\n');
 }
 
 module.exports = {
   escapeHtml, escapeAttr, md, codeBlock, highlight, langForFile,
   renderDiff, renderTodos, renderToolCard, renderBlocks, renderTurn,
   renderTranscript, fmtTime,
+  renderToolInput, renderToolResult, basename,
 };

@@ -202,6 +202,48 @@ function extractImages(rawBlock, refPrefix, imageStore) {
   return images;
 }
 
+/** A prompt may be a plain string or a list of content blocks. */
+function promptText(p) {
+  if (typeof p === 'string') return p;
+  if (Array.isArray(p)) {
+    return p.filter((b) => b && b.type === 'text' && typeof b.text === 'string').map((b) => b.text).join('\n\n');
+  }
+  return '';
+}
+
+/**
+ * One of your messages, as a content block. Text you paste into the VS Code
+ * chat arrives wrapped in <pasted_content> tags: keep the words, drop the
+ * tags, and remember it was pasted so the viewer can say so.
+ */
+const PASTE_TAG = /<\/?pasted_content\b[^>]*>/g;
+function humanBlock(text) {
+  const s = String(text == null ? '' : text);
+  if (!PASTE_TAG.test(s)) return { type: 'text', text: s };
+  PASTE_TAG.lastIndex = 0;
+  return { type: 'text', text: s.replace(PASTE_TAG, '').trim(), pasted: true };
+}
+
+/** The text inside <tag>...</tag>, or '' when the tag is absent. */
+function tagText(s, tag) {
+  const m = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(String(s || ''));
+  return m ? m[1].trim() : '';
+}
+
+/**
+ * A background job reported back: a task Claude started earlier (a helper
+ * agent, a long command) finished while the conversation went on. Claude Code
+ * hands the report to Claude as a message, but nobody typed it.
+ */
+function jobTurn(text, timestamp, uuid) {
+  const summary = tagText(text, 'summary') || tagText(text, 'status') || '';
+  return {
+    kind: 'system', category: 'job', label: 'A background job finished',
+    detail: firstLine(summary, 140) || null,
+    text, timestamp, uuid,
+  };
+}
+
 /** Text a tool_result carries besides any images. */
 function textFromContentList(rawBlock) {
   const c = rawBlock && rawBlock.content;
@@ -266,6 +308,9 @@ function parseSessionFile(filePath) {
     if (o.version) versionSet.add(o.version);
     if (o.gitBranch && !session.gitBranch) session.gitBranch = o.gitBranch;
     if (o.type === 'ai-title' && o.aiTitle) session.title = o.aiTitle;
+    if (o.type === 'custom-title' && o.customTitle) session.customTitle = o.customTitle;
+    // Claude Code's own running total; the last record is the final figure.
+    if (o.type === 'cost-state' && typeof o.totalCostUSD === 'number') session.stats.costUSD = o.totalCostUSD;
     if (o.type === 'file-history-delta' && o.trackingPath) {
       const dir = o.backup && o.backup.realParentDir;
       const full = dir ? path.join(dir, o.trackingPath) : o.trackingPath;
@@ -318,6 +363,22 @@ function parseSessionFile(filePath) {
       case 'user': {
         const content = o.message && o.message.content;
         const isMeta = !!o.isMeta;
+        const origin = o.origin && o.origin.kind;
+
+        // The summary Claude Code writes for Claude when it compacts a long
+        // chat. It sits in a user record, but you never typed it.
+        if (o.isCompactSummary) {
+          push({
+            kind: 'system', category: 'compact', label: 'Summary Claude Code wrote at compaction',
+            text: promptText(content), timestamp: o.timestamp, uuid: o.uuid,
+          });
+          break;
+        }
+        const plain = promptText(content);
+        if (origin === 'task-notification' || /^\s*<task-notification>/.test(plain)) {
+          push(jobTurn(plain, o.timestamp, o.uuid));
+          break;
+        }
 
         if (typeof content === 'string') {
           if (isMeta || /^<[a-z-]+>/i.test(content.trim())) {
@@ -325,7 +386,7 @@ function parseSessionFile(filePath) {
           } else {
             exchange++;
             session.stats.humanTurns++;
-            push({ kind: 'human', timestamp: o.timestamp, uuid: o.uuid, blocks: [{ type: 'text', text: content }] });
+            push({ kind: 'human', timestamp: o.timestamp, uuid: o.uuid, blocks: [humanBlock(content)] });
           }
           break;
         }
@@ -342,7 +403,7 @@ function parseSessionFile(filePath) {
         } else {
           exchange++;
           session.stats.humanTurns++;
-          push({ kind: 'human', timestamp: o.timestamp, uuid: o.uuid, blocks: [{ type: 'text', text: joined }] });
+          push({ kind: 'human', timestamp: o.timestamp, uuid: o.uuid, blocks: [humanBlock(joined)] });
         }
         break;
       }
@@ -412,6 +473,13 @@ function parseSessionFile(filePath) {
           push({ kind: 'system', category: 'error', label: 'API error', text: txt, timestamp: o.timestamp, uuid: o.uuid });
           break;
         }
+        // Claude Code writes some notices ("session limit reached", "login
+        // expired") as if Claude had said them. They are not Claude's words.
+        if (m.model === '<synthetic>') {
+          const txt = blocks.filter((x) => x.type === 'text').map((x) => x.text).join('\n');
+          if (txt) push({ kind: 'system', category: 'error', label: 'Claude Code notice', text: txt, timestamp: o.timestamp, uuid: o.uuid });
+          break;
+        }
 
         session.stats.assistantTurns++;
         if (m.model) session.stats.models[m.model] = (session.stats.models[m.model] || 0) + 1;
@@ -421,10 +489,21 @@ function parseSessionFile(filePath) {
         session.stats.tokens.cacheRead += u.cache_read_input_tokens || 0;
         session.stats.tokens.cacheCreation += u.cache_creation_input_tokens || 0;
 
+        // `end_turn` is the API's own record that Claude finished and handed
+        // the chat back. It is exact, not a guess from the wording: progress
+        // notes written mid-task stop with `tool_use` instead. A finishing
+        // answer can still sit mid-chat, when a background job reports back
+        // afterwards and Claude carries on by itself.
+        const final = m.stop_reason === 'end_turn' && blocks.some((b) => b.type === 'text');
+        if (final) session.stats.answers = (session.stats.answers || 0) + 1;
+
         push({
           kind: 'assistant',
           timestamp: o.timestamp,
           uuid: o.uuid,
+          messageId: m.id || null,
+          stopReason: m.stop_reason || null,
+          final,
           model: m.model,
           effort: o.effort,
           skill: o.attributionSkill,
@@ -452,10 +531,26 @@ function parseSessionFile(filePath) {
             timestamp: o.timestamp, uuid: o.uuid,
           });
         } else if (a.type === 'queued_command') {
-          push({
-            kind: 'system', category: 'note', label: 'Queued input',
-            text: a.prompt || a.command || '', timestamp: o.timestamp, uuid: o.uuid,
-          });
+          // Something delivered while Claude was busy. Only `human` is you
+          // typing; the rest are reports from background jobs and helpers.
+          const kind = a.origin && a.origin.kind;
+          const text = promptText(a.prompt) || a.command || '';
+          if (kind === 'task-notification' || a.commandMode === 'task-notification') {
+            push(jobTurn(text, o.timestamp, o.uuid));
+          } else if (kind === 'peer') {
+            push({
+              kind: 'system', category: 'job', label: 'A helper agent reported back',
+              detail: a.origin.name || null, text: a.origin.body || text,
+              timestamp: o.timestamp, uuid: o.uuid,
+            });
+          } else if (!text.trim()) {
+            break;
+          } else if (kind === 'human' || a.commandMode === 'prompt' || !kind) {
+            session.stats.humanTurns++;
+            push({ kind: 'human', queued: true, timestamp: o.timestamp, uuid: o.uuid, blocks: [humanBlock(text)] });
+          } else {
+            push({ kind: 'system', category: 'note', label: 'Queued input', text, timestamp: o.timestamp, uuid: o.uuid });
+          }
         }
         break;
       }
@@ -469,6 +564,19 @@ function parseSessionFile(filePath) {
             text: e.formatted || e.message || 'Unknown API error',
             detail: o.retryAttempt != null ? `retry ${o.retryAttempt}/${o.maxRetries}` : null,
             timestamp: o.timestamp, uuid: o.uuid,
+          });
+        } else if (o.subtype === 'compact_boundary') {
+          const meta = o.compactMetadata || {};
+          session.stats.compactions = (session.stats.compactions || 0) + 1;
+          push({
+            kind: 'system', category: 'compact', label: 'Claude Code compacted the conversation here',
+            detail: meta.trigger === 'manual' ? 'you asked for it' : meta.trigger === 'auto' ? 'automatically, the chat was getting long' : null,
+            text: '', timestamp: o.timestamp, uuid: o.uuid,
+          });
+        } else if ((o.subtype === 'informational' || o.subtype === 'model_refusal_fallback') && o.content) {
+          push({
+            kind: 'system', category: o.level === 'warning' ? 'warn' : 'note', label: 'Claude Code notice',
+            text: String(o.content), timestamp: o.timestamp, uuid: o.uuid,
           });
         } else if (o.subtype === 'stop_hook_summary') {
           const hooks = (o.hookInfos || []).map((h) => firstLine(h.command, 80)).join(', ');
@@ -493,6 +601,7 @@ function parseSessionFile(filePath) {
   if (session.startedAt && session.endedAt) {
     session.durationMs = new Date(session.endedAt) - new Date(session.startedAt);
   }
+  if (session.customTitle) session.title = session.customTitle;   // a name you gave the chat wins
   if (!session.title) {
     const firstHuman = session.turns.find((t) => t.kind === 'human');
     session.title = firstHuman ? firstLine(firstHuman.blocks[0].text, 70) : session.sessionId.slice(0, 8);
@@ -521,7 +630,8 @@ function peekSessionFile(filePath) {
     const o = safeParse(line);
     if (!o) continue;
     if (o.cwd) cwdCounts.set(o.cwd, (cwdCounts.get(o.cwd) || 0) + 1);
-    if (o.type === 'ai-title' && o.aiTitle) out.title = o.aiTitle;
+    if (o.type === 'ai-title' && o.aiTitle && !out.customTitle) out.title = o.aiTitle;
+    if (o.type === 'custom-title' && o.customTitle) { out.title = o.customTitle; out.customTitle = true; }
     if (o.gitBranch && !out.gitBranch) out.gitBranch = o.gitBranch;
     if (o.type === 'user' || o.type === 'assistant') out.messageCount++;
     if (!firstPrompt && o.type === 'user' && !o.isMeta) {
@@ -538,7 +648,7 @@ function peekSessionFile(filePath) {
     }
   }
   out.cwds = [...cwdCounts.entries()].map(([p, count]) => ({ path: p, count })).sort((a, b) => b.count - a.count);
-  if (!out.title) out.title = firstPrompt ? firstLine(firstPrompt, 70) : out.sessionId.slice(0, 8);
+  if (!out.title) out.title = firstPrompt ? firstLine(humanBlock(firstPrompt).text, 70) : out.sessionId.slice(0, 8);
   return out;
 }
 

@@ -114,7 +114,7 @@ function exportMarkdown(session, imageStore, opts = {}) {
   meta.push(`- **Session:** \`${session.sessionId}\``);
   if (session.startedAt) meta.push(`- **Started:** ${fmtTime(session.startedAt)}`);
   if (session.endedAt) meta.push(`- **Ended:** ${fmtTime(session.endedAt)}`);
-  meta.push(`- **Messages:** ${fmtNum(s.humanTurns)} from you, ${fmtNum(s.assistantTurns)} from Claude`);
+  meta.push(`- **Messages:** ${fmtNum(s.humanTurns)} from you, ${fmtNum(s.answers || 0)} answers from Claude`);
   if (s.toolCalls) meta.push(`- **Tool calls:** ${fmtNum(s.toolCalls)}`);
   const model = Object.keys(s.models || {}).filter((m) => m && m !== '<synthetic>')[0];
   if (model) meta.push(`- **Model:** ${model}`);
@@ -122,23 +122,38 @@ function exportMarkdown(session, imageStore, opts = {}) {
   out.push(meta.join('\n') + '\n');
   out.push('---\n');
 
+  // Consecutive records from Claude are one reply under one heading, the way
+  // they read in the app. Claude's finishing answers are marked, and the
+  // conversation-only export keeps just those and your messages.
+  const only = opts.conversationOnly === true;
+  let inClaude = false;
+  const claudeHeading = () => { if (!inClaude) { out.push('\n## Claude\n'); inClaude = true; } };
+
   for (const turn of session.turns) {
     if (turn.kind === 'human') {
-      out.push(`\n## You\n`);
+      out.push(turn.queued ? '\n### You, while Claude was working\n' : '\n## You\n');
       if (turn.timestamp) out.push(`<sub>${fmtTime(turn.timestamp)}</sub>\n`);
       for (const b of turn.blocks || []) if (b.text) out.push(b.text.trim() + '\n');
+      if (!turn.queued) inClaude = false;
       continue;
     }
 
     if (turn.kind === 'assistant') {
-      out.push(`\n## Claude\n`);
+      const hasText = (turn.blocks || []).some((b) => b.type === 'text');
+      if (only && !(turn.final && hasText)) continue;
       for (const b of turn.blocks || []) {
         if (b.type === 'text') {
+          claudeHeading();
+          if (turn.final) out.push(`**✓ Answer**${turn.timestamp ? ` <sub>${fmtTime(turn.timestamp)}</sub>` : ''}\n`);
           out.push(b.text.trim() + '\n');
+        } else if (only) {
+          continue;
         } else if (b.type === 'thinking') {
           if (b.redacted) continue;
+          claudeHeading();
           out.push(b.text.split('\n').map((l) => '> ' + l).join('\n') + '\n');
         } else if (b.type === 'tool' && includeTools) {
+          claudeHeading();
           const res = b.result || {};
           const badge = res.kind === 'diff' ? ` (+${res.added} / −${res.removed})`
             : res.isError ? ' (error)' : '';
@@ -153,9 +168,17 @@ function exportMarkdown(session, imageStore, opts = {}) {
       continue;
     }
 
-    if (turn.kind === 'system') {
+    if (turn.kind === 'system' && !only) {
       if (turn.category === 'error') {
         out.push(`\n> **${turn.label || 'Error'}** — ${(turn.text || '').split('\n')[0]}\n`);
+      } else if (turn.category === 'job') {
+        out.push(`\n> **${turn.label}**${turn.detail ? ': ' + turn.detail : ''}. Claude carried on by itself.\n`);
+        inClaude = false;
+      } else if (turn.category === 'compact') {
+        out.push(turn.text
+          ? `\n<details>\n<summary>The summary Claude Code wrote for itself at compaction</summary>\n\n${turn.text.trim()}\n\n</details>\n`
+          : `\n> **${turn.label}.** Nothing above was lost.\n`);
+        inClaude = false;
       } else if (includeSystem) {
         out.push(`\n<sub>${turn.label || 'note'}${turn.detail ? ' — ' + turn.detail : ''}</sub>\n`);
       }

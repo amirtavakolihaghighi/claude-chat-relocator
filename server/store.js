@@ -27,12 +27,14 @@ class Store {
     this._scan = null;
     this._scanKey = null;
     this._sessions = new Map();   // key -> { key, session, imageStore }
+    this.archiveRoot = null;      // the archive's projects/ folder, when there is one
   }
 
   setRoot(dir, { remember = true } = {}) {
     const next = P.normalizePath(dir);
     if (!P.dirExists(next)) {
       const err = new Error(`Not a directory: ${next}`);
+      err.help = 'E-NOT-A-FOLDER';
       err.status = 400;
       throw err;
     }
@@ -60,6 +62,18 @@ class Store {
       else current.root = dir;
       fs.writeFileSync(Store.settingsFile(), JSON.stringify(current, null, 2), 'utf8');
     } catch { /* a read-only home just means the choice is not remembered */ }
+  }
+
+  /** Merge `patch` into the saved settings; a null value removes the key. */
+  static updateSettings(patch) {
+    const current = Store.readSettings();
+    for (const [k, v] of Object.entries(patch || {})) {
+      if (v == null) delete current[k];
+      else current[k] = v;
+    }
+    fs.mkdirSync(P.appDataDir(), { recursive: true });
+    fs.writeFileSync(Store.settingsFile(), JSON.stringify(current, null, 2), 'utf8');
+    return current;
   }
 
   static readSettings() {
@@ -220,8 +234,14 @@ class Store {
       err.status = 400;
       throw err;
     }
+    // A chat Claude Code deleted can still be read from the archive.
+    if (!P.fileExists(full) && this.archiveRoot) {
+      const kept = path.join(this.archiveRoot, folderName, sessionId + '.jsonl');
+      if (P.isUnder(kept, this.archiveRoot) && P.fileExists(kept)) return kept;
+    }
     if (!P.fileExists(full)) {
       const err = new Error(`No such session: ${sessionId}`);
+      err.help = 'E-NO-SESSION';
       err.status = 404;
       throw err;
     }
@@ -242,6 +262,7 @@ class Store {
     }
 
     const parsed = parseSessionFile(full);
+    parsed.session.fromArchive = !!(this.archiveRoot && P.isUnder(full, this.archiveRoot));
     const entry = { key, session: parsed.session, imageStore: parsed.imageStore };
     this._sessions.set(key, entry);
     while (this._sessions.size > MAX_CACHED_SESSIONS) {
@@ -276,6 +297,7 @@ class Store {
       durationMs: session.durationMs,
       sizeBytes: session.sizeBytes,
       folderNameMatchesCwd: session.folderNameMatchesCwd,
+      fromArchive: !!session.fromArchive,
       parseErrors: session.parseErrors,
       stats: session.stats,
       turnCount: session.turns.length,

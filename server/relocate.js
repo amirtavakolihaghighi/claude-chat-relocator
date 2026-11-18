@@ -23,6 +23,21 @@ const P = require('./paths');
 
 const LIVE_WINDOW_MS = 90 * 1000;   // a file touched this recently may be open
 
+/*
+ * Every message carries a short code (W-LIVE, E-TARGET-EXISTS...). The text
+ * stays exactly as it was; the codes travel beside it in errorCodes and
+ * warningCodes, and the app uses them to link each message to its entry in
+ * docs/HELP.md, which explains what it means and what to do.
+ */
+function addError(plan, code, text) { plan.errors.push(text); plan.errorCodes.push(code); }
+function addWarning(plan, code, text) { plan.warnings.push(text); plan.warningCodes.push(code); }
+function codedError(message, status, help) {
+  const err = new Error(message);
+  err.status = status;
+  err.help = help;
+  return err;
+}
+
 function historyFile() {
   return path.join(P.appDataDir(), 'history.json');
 }
@@ -120,18 +135,20 @@ function planRelocate(store, folderName, newProjectPathRaw) {
     liveFiles: [],
     warnings: [],
     errors: [],
+    warningCodes: [],
+    errorCodes: [],
   };
 
   if (!P.looksAbsolute(newProjectPath)) {
-    plan.errors.push(`"${newProjectPathRaw}" is not an absolute path. Use something like D:\\Files\\Projects\\MyApp.`);
+    addError(plan, 'E-NOT-ABSOLUTE', `"${newProjectPathRaw}" is not an absolute path. Use something like D:\\Files\\Projects\\MyApp.`);
     plan.ok = false;
     return plan;
   }
   if (!oldProjectPath) {
-    plan.errors.push('This folder has no recorded cwd, so there is no old path to rewrite. You can still rename the folder manually.');
+    addError(plan, 'E-NO-CWD', 'This folder has no recorded cwd, so there is no old path to rewrite. You can still rename the folder manually.');
   }
   if (!plan.newProjectPathExists) {
-    plan.warnings.push(`${newProjectPath} does not exist on disk yet. The rename will still work, but the extension will only load these chats once you open that folder.`);
+    addWarning(plan, 'W-NO-FOLDER', `${newProjectPath} does not exist on disk yet. The rename will still work, but the extension will only load these chats once you open that folder.`);
   }
 
   // Non-ASCII paths deserve two extra checks. The encoding turns every
@@ -142,11 +159,11 @@ function planRelocate(store, folderName, newProjectPathRaw) {
   plan.newFolderNameLength = plan.newFolderName.length;
   plan.storePathLength = storePathLength;
   if (plan.newFolderName.length > 255) {
-    plan.errors.push(`The folder name this path produces is ${plan.newFolderName.length} characters, past the 255-character limit for a single folder name. Move the project somewhere less deeply nested.`);
+    addError(plan, 'E-NAME-TOO-LONG', `The folder name this path produces is ${plan.newFolderName.length} characters, past the 255-character limit for a single folder name. Move the project somewhere less deeply nested.`);
   } else if (P.IS_WIN && storePathLength > 247) {
     // 247 leaves room for a session filename (a 36-char uuid + ".jsonl") to
     // still fit inside the classic 260-character MAX_PATH.
-    plan.warnings.push(`The chat folder path would be ${storePathLength} characters. Windows limits paths to 260 unless long paths are enabled, and the session files inside add about 43 more. Consider a shallower location for the project.`);
+    addWarning(plan, 'W-PATH-LONG', `The chat folder path would be ${storePathLength} characters. Windows limits paths to 260 unless long paths are enabled, and the session files inside add about 43 more. Consider a shallower location for the project.`);
   }
 
   // A path that is not NFC-normalised encodes differently from its NFC twin,
@@ -154,12 +171,12 @@ function planRelocate(store, folderName, newProjectPathRaw) {
   // by hand is where the two can drift apart.
   const nfc = newProjectPath.normalize('NFC');
   if (nfc !== newProjectPath && P.encodeProjectFolder(nfc) !== plan.newFolderName) {
-    plan.warnings.push('This path contains characters that can be written more than one way in Unicode, and the spelling you gave encodes to a different folder name than its normalised form. Use Browse instead of typing it, so the path is read straight from disk.');
+    addWarning(plan, 'W-UNICODE', 'This path contains characters that can be written more than one way in Unicode, and the spelling you gave encodes to a different folder name than its normalised form. Use Browse instead of typing it, so the path is read straight from disk.');
   }
 
   if (project.issues && project.issues.includes('ambiguous')) {
     const others = (project.rootCandidates || []).map((c) => c.path).join(', ');
-    plan.warnings.push(`This one folder holds chats from more than one project (${others}) because their paths encode to the same name. Only chats recorded against ${oldProjectPath} will be repointed; the rest stay behind.`);
+    addWarning(plan, 'W-SHARED', `This one folder holds chats from more than one project (${others}) because their paths encode to the same name. Only chats recorded against ${oldProjectPath} will be repointed; the rest stay behind.`);
   }
 
   plan.folderRenameNeeded = plan.newFolderName !== folderName;
@@ -167,14 +184,14 @@ function planRelocate(store, folderName, newProjectPathRaw) {
     const target = path.join(store.root, plan.newFolderName);
     if (P.dirExists(target)) {
       plan.targetFolderExists = true;
-      plan.errors.push(`A chat folder named "${plan.newFolderName}" already exists. Another project is already registered at ${newProjectPath}; merging chat folders is not something this tool will do automatically.`);
+      addError(plan, 'E-TARGET-EXISTS', `A chat folder named "${plan.newFolderName}" already exists. Another project is already registered at ${newProjectPath}; merging chat folders is not something this tool will do automatically.`);
     }
   } else {
-    plan.warnings.push('The folder name is already correct for that path; only the cwd fields inside the files will change.');
+    addWarning(plan, 'W-NAME-OK', 'The folder name is already correct for that path; only the cwd fields inside the files will change.');
   }
 
   if (oldProjectPath && P.pathsEqual(oldProjectPath, newProjectPath) && !plan.folderRenameNeeded) {
-    plan.warnings.push('The new path is the same as the current one. Nothing to do.');
+    addWarning(plan, 'W-SAME-PATH', 'The new path is the same as the current one. Nothing to do.');
   }
 
   const now = Date.now();
@@ -185,7 +202,7 @@ function planRelocate(store, folderName, newProjectPathRaw) {
       st = fs.statSync(full);
       text = fs.readFileSync(full, 'utf8');
     } catch (e) {
-      plan.errors.push(`Cannot read ${name}: ${e.message}`);
+      addError(plan, 'E-UNREADABLE', `Cannot read ${name}: ${e.message}`);
       continue;
     }
     if (now - st.mtimeMs < LIVE_WINDOW_MS) {
@@ -213,7 +230,7 @@ function planRelocate(store, folderName, newProjectPathRaw) {
   }
 
   if (plan.liveFiles.length) {
-    plan.warnings.push(`${plan.liveFiles.join(', ')} changed in the last 90 seconds. If that chat is open in VS Code right now, close it first -- the extension may overwrite your changes.`);
+    addWarning(plan, 'W-LIVE', `${plan.liveFiles.join(', ')} changed in the last 90 seconds. If that chat is open in VS Code right now, close it first -- the extension may overwrite your changes.`);
   }
 
   plan.ok = plan.errors.length === 0;
@@ -226,8 +243,7 @@ function planRelocate(store, folderName, newProjectPathRaw) {
 function applyRelocate(store, folderName, newProjectPathRaw, opts = {}) {
   const plan = planRelocate(store, folderName, newProjectPathRaw);
   if (!plan.ok) {
-    const err = new Error(plan.errors[0]);
-    err.status = 400;
+    const err = codedError(plan.errors[0], 400, plan.errorCodes[0]);
     err.plan = plan;
     throw err;
   }
@@ -301,10 +317,10 @@ function applyRelocate(store, folderName, newProjectPathRaw, opts = {}) {
 function planBulk(store, oldPrefixRaw, newPrefixRaw) {
   const oldPrefix = P.normalizePath(oldPrefixRaw);
   const newPrefix = P.normalizePath(newPrefixRaw);
-  const out = { oldPrefix, newPrefix, matches: [], skipped: [], errors: [] };
+  const out = { oldPrefix, newPrefix, matches: [], skipped: [], errors: [], errorCodes: [] };
 
   if (!P.looksAbsolute(oldPrefix) || !P.looksAbsolute(newPrefix)) {
-    out.errors.push('Both the old and new prefix must be absolute paths.');
+    addError(out, 'E-NOT-ABSOLUTE', 'Both the old and new prefix must be absolute paths.');
     return out;
   }
 
@@ -327,7 +343,7 @@ function planBulk(store, oldPrefixRaw, newPrefixRaw) {
   }
   for (const [target, sources] of byTarget) {
     if (sources.length > 1) {
-      out.errors.push(`${sources.join(' and ')} would both become "${target}". Resolve those individually.`);
+      addError(out, 'E-BULK-COLLIDE', `${sources.join(' and ')} would both become "${target}". Resolve those individually.`);
     }
   }
 
@@ -339,8 +355,7 @@ function planBulk(store, oldPrefixRaw, newPrefixRaw) {
 function applyBulk(store, oldPrefix, newPrefix, opts = {}) {
   const plan = planBulk(store, oldPrefix, newPrefix);
   if (!plan.ok) {
-    const err = new Error(plan.errors[0] || 'One or more folders cannot be relocated; review the plan.');
-    err.status = 400;
+    const err = codedError(plan.errors[0] || 'One or more folders cannot be relocated; review the plan.', 400, plan.errorCodes[0] || 'E-BULK-BLOCKED');
     err.plan = plan;
     throw err;
   }
@@ -356,28 +371,20 @@ function undo(store, id) {
   const list = readHistory();
   const entry = list.find((e) => e.id === id);
   if (!entry) {
-    const err = new Error('No such operation in history');
-    err.status = 404;
-    throw err;
+    throw codedError('No such operation in history', 404, 'E-UNDO-UNKNOWN');
   }
   if (entry.undoneAt) {
-    const err = new Error('That operation has already been undone');
-    err.status = 400;
-    throw err;
+    throw codedError('That operation has already been undone', 400, 'E-UNDO-DONE');
   }
   if (!entry.backupDir || !P.dirExists(entry.backupDir)) {
-    const err = new Error('The backup for that operation is gone, so it cannot be undone automatically');
-    err.status = 400;
-    throw err;
+    throw codedError('The backup for that operation is gone, so it cannot be undone automatically', 400, 'E-UNDO-NO-BACKUP');
   }
 
   const currentDir = path.join(entry.root, entry.newFolderName);
   const originalDir = path.join(entry.root, entry.oldFolderName);
 
   if (P.dirExists(originalDir) && P.normalizePath(originalDir) !== P.normalizePath(currentDir)) {
-    const err = new Error(`"${entry.oldFolderName}" exists again; remove or rename it before undoing.`);
-    err.status = 400;
-    throw err;
+    throw codedError(`"${entry.oldFolderName}" exists again; remove or rename it before undoing.`, 400, 'E-UNDO-EXISTS');
   }
 
   // Park the relocated folder aside, restore the backup, then drop the parked copy.

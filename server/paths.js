@@ -101,9 +101,13 @@ function defaultClaudeProjectsDir() {
   return path.join(os.homedir(), '.claude', 'projects');
 }
 
-/** Where this app keeps its own state: backups, undo manifests, settings. */
+/**
+ * Where this app keeps its own state: backups, undo manifests, settings.
+ * CLAUDE_RELOCATOR_DATA moves it, so the demo and the UI check can run without
+ * touching the settings of the copy you use every day.
+ */
 function appDataDir() {
-  return path.join(os.homedir(), '.claude-chat-relocator');
+  return process.env.CLAUDE_RELOCATOR_DATA || path.join(os.homedir(), '.claude-chat-relocator');
 }
 
 function dirExists(p) {

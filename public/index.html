@@ -4,56 +4,108 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Claude Chat Relocator</title>
+<script>
+  // Apply a saved light/dark choice before anything paints, so there is no flash.
+  try { var t = localStorage.getItem('ccx-theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+</script>
 <link rel="stylesheet" href="/transcript.css">
 <link rel="stylesheet" href="/styles.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>&#128193;</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%232f5fd0'/><path d='M6 7h12a1.5 1.5 0 0 1 1.5 1.5v6A1.5 1.5 0 0 1 18 16h-5l-4 3v-3H6a1.5 1.5 0 0 1-1.5-1.5v-6A1.5 1.5 0 0 1 6 7z' fill='white'/></svg>">
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <span class="mark" aria-hidden="true">&#9679;</span>
-    <span class="bname">Claude Chat Relocator</span>
-  </div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4.3L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0z"/><path d="M12 10v4"/><path d="M12 17.5h.01"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V9"/><path d="M7 14l5-5 5 5"/><path d="M5 4h14"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M4 10h11a5 5 0 0 1 0 10h-3"/><path d="M8 6l-4 4 4 4"/></symbol>
+    <symbol id="i-move" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></symbol>
+    <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.1A10 10 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3 3.6"/><path d="M6.6 7.7A17 17 0 0 0 2.5 12S6 18 12 18a9.6 9.6 0 0 0 4.4-1"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></symbol>
+    <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 3 3V4z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-3 3V4z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M8 3h8l-1 6 3 3H6l3-3z"/></symbol>
+  </defs>
+</svg>
 
-  <button class="rootbtn" id="rootBtn" title="The .claude/projects folder being read">
-    <span class="rootlabel">store</span>
-    <span class="rootpath" id="rootPath">…</span>
-  </button>
-
-  <div class="searchbox">
-    <input type="search" id="search" placeholder="Search every chat…" autocomplete="off" spellcheck="false">
-    <kbd>/</kbd>
-  </div>
-
-  <div class="topactions">
-    <button class="btn" id="bulkBtn" title="Remap many projects at once">Bulk remap</button>
-    <button class="btn" id="importBtn" title="Import a chat archive from another machine">Import</button>
-    <button class="btn" id="exportAllBtn" title="Export chats as a portable archive">Archive</button>
-    <button class="btn" id="historyBtn" title="Undo a previous relocation">History</button>
-    <button class="btn icon" id="themeBtn" title="Switch theme">&#9681;</button>
-  </div>
-</header>
-
-<div class="shell">
-  <aside class="sidebar" id="sidebar">
-    <div class="sidehead">
-      <div class="filters" id="filters">
-        <button class="chip on"   data-filter="all">All</button>
-        <button class="chip warn" data-filter="problems">Needs attention</button>
+<div class="app">
+  <header class="top">
+    <a class="brand" href="#home" title="Home">
+      <span class="logo"><svg class="i"><use href="#i-chat"/></svg></span><span class="bname">Claude Chat Relocator</span>
+    </a>
+    <label class="search" title="Search everything you and Claude wrote, in every chat. Press / to jump here.">
+      <svg class="i"><use href="#i-search"/></svg>
+      <input type="search" id="search" placeholder="Search all chats…" autocomplete="off" spellcheck="false">
+      <kbd>/</kbd>
+    </label>
+    <div class="grow"></div>
+    <button class="btn ghost" id="bulkBtn" type="button" title="You moved a whole folder of projects, or set up a new computer: repoint every chat underneath at once.">
+      <svg class="i"><use href="#i-move"/></svg><span class="lbl">Move many projects</span></button>
+    <div class="menuwrap">
+      <button class="btn ghost" id="ioBtn" type="button" aria-haspopup="true" title="Carry chats to another computer as a zip file, or bring them in from one.">
+        <span class="lbl">Import / Export</span><svg class="i sm caret"><use href="#i-down"/></svg></button>
+      <div class="menu" id="ioMenu" hidden>
+        <button type="button" data-act="export-zip"><svg class="i"><use href="#i-up"/></svg><span><b>Export chats to a zip…</b><small>For another computer. Keeps each project's real path.</small></span></button>
+        <button type="button" data-act="import-zip"><svg class="i"><use href="#i-dl"/></svg><span><b>Import chats from a zip…</b><small>You choose where each project lives on this computer.</small></span></button>
       </div>
-      <button class="btn tiny" id="refreshBtn" title="Rescan the store">Rescan</button>
+    </div>
+    <button class="btn ghost" id="historyBtn" type="button" title="Every relocation is backed up first. Put one back the way it was.">
+      <svg class="i"><use href="#i-undo"/></svg><span class="lbl">Undo history</span></button>
+    <button class="btn iconbtn" id="settingsBtn" type="button" title="Settings: where your chats and archive are, automatic saving, light or dark"><svg class="i"><use href="#i-gear"/></svg></button>
+    <button class="btn iconbtn" id="helpBtn" type="button" title="Help: what everything does and what every message means"><svg class="i"><use href="#i-help"/></svg></button>
+    <button class="btn iconbtn" id="themeBtn" type="button" title="Switch between light and dark"><svg class="i"><use href="#i-moon"/></svg></button>
+  </header>
+
+  <aside class="side" id="sidebar">
+    <nav class="nav" aria-label="Pages">
+      <a href="#home" data-nav="home" title="Every project at a glance, and anything that needs fixing"><svg class="i"><use href="#i-home"/></svg>Home</a>
+      <a href="#archive" data-nav="archive" title="Your permanent copy of every chat and memory file"><svg class="i"><use href="#i-box"/></svg>Archive<span class="count" id="navArchive"></span></a>
+      <a href="#memory" data-nav="memory" title="The notes Claude keeps about you and each project"><svg class="i"><use href="#i-brain"/></svg>Memory files<span class="count" id="navMemory"></span></a>
+      <a href="#help" data-nav="help" title="What everything does, step by step"><svg class="i"><use href="#i-book"/></svg>Help &amp; guide</a>
+    </nav>
+
+    <h4><span class="grow">Projects</span><button class="linkbtn" id="refreshBtn" type="button" title="Look at the chat folder again for new or changed chats">Rescan</button></h4>
+    <div class="seg" id="filters" role="tablist">
+      <button type="button" data-filter="all" class="on" title="Every project">All</button>
+      <button type="button" data-filter="problems" title="Projects whose chats VS Code cannot find right now">Needs fixing</button>
+      <button type="button" data-filter="archived" title="Chats kept in your archive that Claude Code no longer has">Archived</button>
     </div>
     <nav class="projects" id="projects" aria-label="Projects"></nav>
+    <button class="storebtn" id="rootBtn" type="button" title="The folder Claude Code keeps its chats in. Click to read a different copy.">
+      <span class="k">Chat folder</span><span class="v" id="rootPath">…</span>
+    </button>
   </aside>
 
   <main class="main" id="main">
-    <div class="empty" id="welcome">
-      <p>Loading…</p>
-    </div>
+    <div class="empty"><span class="spin"></span></div>
   </main>
 </div>
 
+<aside class="drawer" id="drawer" hidden aria-label="Help">
+  <header><svg class="i"><use href="#i-help"/></svg><b>Help</b><span class="grow"></span>
+    <a class="btn sm ghost" href="#help" id="drawerFull">Open the full guide</a>
+    <button class="btn iconbtn ghost" type="button" id="drawerClose" title="Close"><svg class="i"><use href="#i-x"/></svg></button></header>
+  <div class="dbody" id="drawerBody"></div>
+</aside>
 <div class="modal-root" id="modalRoot" hidden></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 

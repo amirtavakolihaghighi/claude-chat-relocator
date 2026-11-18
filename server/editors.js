@@ -69,6 +69,7 @@ async function open(dir, editorId, newWindow = true) {
   const target = P.normalizePath(dir);
   if (!P.dirExists(target)) {
     const err = new Error(`That folder is not on this machine any more: ${target}`);
+    err.help = 'E-OPEN-MISSING';
     err.status = 404;
     throw err;
   }
@@ -76,6 +77,7 @@ async function open(dir, editorId, newWindow = true) {
   const available = await detect();
   if (!available.length) {
     const err = new Error('No supported editor was found on your PATH. In VS Code, run "Shell Command: Install \'code\' command in PATH" from the command palette.');
+    err.help = 'E-NO-EDITOR';
     err.status = 400;
     throw err;
   }
