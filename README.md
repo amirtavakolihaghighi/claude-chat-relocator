@@ -8,7 +8,7 @@ and bring back the ones VS Code can no longer find.**
 [![CI](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml/badge.svg)](https://github.com/amirtavakolihaghighi/claude-chat-relocator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-129%20passing-brightgreen.svg)](test/)
+[![Tests](https://img.shields.io/badge/tests-139%20passing-brightgreen.svg)](test/)
 [![Version](https://img.shields.io/github/v/release/amirtavakolihaghighi/claude-chat-relocator)](https://github.com/amirtavakolihaghighi/claude-chat-relocator/releases)
 
 A local app for the chats the Claude Code VS Code extension keeps in
@@ -78,6 +78,10 @@ the quickest way to reread a long chat.
 
 Search every chat at once, and save any chat as a self-contained web page
 (prints to PDF), as Markdown, or as the original file.
+
+The layout follows the window, from a wide desktop screen down to a phone. The
+sidebar can be dragged wider or narrower, shrunk to icons, or closed, and on a
+small screen it slides over the page instead of squeezing it.
 
 ### Keep everything, permanently
 
@@ -161,7 +165,7 @@ This opens `http://127.0.0.1:4317` and needs Node 20 or newer.
 PORT=4400 npm start                        # a different port
 NO_OPEN=1 npm start                        # do not open a browser
 CLAUDE_PROJECTS_DIR=/some/copy npm start   # read chats from somewhere else
-npm test                                   # 129 tests; no real data touched
+npm test                                   # 139 tests; no real data touched
 npm run demo                               # a throwaway store showing every state
 npm run archive -- save                    # save to the archive from a terminal
 ```
