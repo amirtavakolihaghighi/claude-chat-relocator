@@ -27,7 +27,7 @@ as `W-LIVE`, and a **What does this mean?** link that leads to its entry in
 
 | Where | What it is |
 |---|---|
-| Top bar | Search, **Move many projects**, **Import / Export** (zip files for another computer), **Undo history**, Settings (gear), Help (?) and light/dark. |
+| Top bar | The **sidebar button** (far left), Search, **Move many projects**, **Import / Export** (zip files for another computer), **Undo history**, Settings (gear), Help (?) and light/dark. |
 | Left column, top | **Home**, **Archive**, **Memory files** and **Help & guide**. |
 | Left column, Projects | One entry per folder you've chatted in. Click it to see its chats. A coloured label means something about it needs attention; click the label to learn what. |
 | Left column, bottom | **Chat folder**: the folder the chats are read from. You rarely need to change it. |
@@ -36,6 +36,35 @@ as `W-LIVE`, and a **What does this mean?** link that leads to its entry in
 Filters above the project list: **All**, **Needs fixing** (only appears when
 something does) and **Archived** (only appears when your archive holds chats
 Claude Code no longer has).
+
+### The sidebar and small windows
+
+The left column is called the sidebar. You can shape it to suit the window you
+are working in. Each computer remembers its own choice.
+
+- **Make it wider or narrower.** Move the mouse over the sidebar's right edge
+  until the pointer turns into a left-right arrow, then drag. Double-click the
+  edge to put it back to its usual width. With the keyboard, click the edge once
+  and use the left and right arrow keys (hold Shift for bigger steps).
+- **Shrink it to icons.** The **double arrow** at the top of the sidebar keeps
+  only the icons, to leave more room for what you are reading. Point at an icon
+  to see its name. The **folder icon** brings the project list back. Press the
+  double arrow again to widen it.
+- **Close it.** The **sidebar button** at the far left of the top bar hides the
+  sidebar completely. Press it again to bring back whatever you had before.
+- **Put it back.** If it ends up somewhere awkward, open Settings and press
+  **Put the sidebar back to its usual size**.
+
+The app also changes shape to fit the window, the way most apps do:
+
+| Window | What changes |
+|---|---|
+| Wide (a desktop screen) | Everything shown with its words, and the sidebar stays beside the page. |
+| Medium (a laptop, or a window dragged narrower) | The top buttons keep their icons and lose their words. Point at one to see what it does. |
+| Narrow (a tablet, or a small window) | The sidebar is hidden to give the page the whole width. The sidebar button slides it open over the page. It closes again when you pick something, press **Esc**, or click outside it. |
+| Very narrow (a phone) | The three rarer top buttons (**Move many projects**, **Import / Export**, **Undo history**) move into the sidebar, under **Tools**. |
+| Very short | A chat's header keeps its title and buttons, and hides the folder path and the counts so there is room to read. **Details** still shows them. |
+| Tiny | Below roughly 320 pixels across or 420 down, nothing shrinks any further. The page scrolls instead, sideways and up and down. |
 
 ## Reading a chat
 
@@ -473,6 +502,12 @@ The **Memory files** page lists them by project. Click one to read it.
 - **In Claude Code**: the file is there now.
 - **Only in your archive**: Claude deleted it; the archive kept it.
 - A number beside a file: how many older versions the archive holds.
+
+At the top of most notes, a small grey box says what kind of note it is
+(**About you**, **Feedback**, **Project note** or **Reference**), gives its name
+and a one-line description. **Technical details** unfolds the rest of the
+settings block at the top of the file. That part is Claude Code's own
+bookkeeping, so you can ignore it. A note with no such block shows no box.
 
 ### Older versions
 

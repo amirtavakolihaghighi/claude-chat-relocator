@@ -170,7 +170,7 @@ const HELP = {
   archive: 'the-archive', setup: 'setting-up-the-archive', autoSave: 'automatic-saving',
   importBackup: 'importing-an-old-backup', restore: 'putting-chats-back', archiveLog: 'what-happened',
   memory: 'memory-files', versions: 'older-versions',
-  settings: 'settings', store: 'the-chat-folder',
+  settings: 'settings', store: 'the-chat-folder', sidebar: 'the-sidebar-and-small-windows',
 };
 
 let helpPromise = null;
@@ -331,6 +331,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (modalStack.length) { e.preventDefault(); closeModal(); return; }
     if (!$('#drawer').hidden) { $('#drawer').hidden = true; return; }
+    if (rootEl.getAttribute('data-nav') === 'open') { setPanel(false); return; }
     $('#ioMenu').hidden = true;
   }
   if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && !modalStack.length) {
@@ -423,10 +424,13 @@ function pickPath(startPath, title = 'Choose a folder', sub = 'Pick the folder i
     const manual = el('input', { type: 'text', value: startPath || '', placeholder: 'Or type a path', spellcheck: 'false' });
     const up = el('button', { class: 'btn sm', type: 'button', onclick: () => load(lastParent) }, icon('up', 'i sm'), 'Up');
 
+    let loads = 0;
     async function load(p) {
+      const mine = ++loads;       // if you click on before a folder has loaded, only the last click counts
       list.replaceChildren(el('div', { class: 'sidenote' }, el('span', { class: 'spin' })));
       try {
         const data = await api('/api/fs/browse?path=' + encodeURIComponent(p == null ? '' : p));
+        if (mine !== loads) return;
         lastParent = data.parent;
         up.disabled = data.parent == null;
         cur.replaceChildren(pathText(data.path || 'This computer'));
@@ -437,17 +441,18 @@ function pickPath(startPath, title = 'Choose a folder', sub = 'Pick the folder i
           list.appendChild(el('button', { type: 'button', onclick: () => load(entry.path) }, icon('folder', 'i sm'), el('span', { text: entry.name })));
         }
       } catch (e) {
-        list.replaceChildren(el('div', { class: 'sidenote', text: e.message }));
+        if (mine === loads) list.replaceChildren(el('div', { class: 'sidenote', text: e.message }));
       }
     }
-    const use = () => { const v = manual.value.trim(); closeModal(node); done(v || null); };
+    // Answer first, then close: closing reports "cancelled", and the first answer wins.
+    const use = () => { const v = manual.value.trim(); done(v || null); closeModal(node); };
     const node = modal({
       title, sub,
       body: el('div', {},
         el('div', { class: 'picker' }, el('div', { class: 'pickerbar' }, up, cur), list),
         el('div', { class: 'field', style: 'margin-top:14px' }, el('label', { text: 'Path' }), el('div', { class: 'inrow' }, manual))),
       foot: [el('div', { class: 'spacer' }),
-        el('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: () => { closeModal(node); done(null); } }),
+        el('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: () => { done(null); closeModal(node); } }),
         el('button', { class: 'btn primary', type: 'button', text: 'Use this folder', onclick: use })],
     });
     node.onclosed = () => done(null);
@@ -1557,7 +1562,11 @@ async function memoryView(folder, name) {
   state.current = null;
   renderSidebar();
   const main = $('#main');
-  if (!$('#memoryPage')) main.replaceChildren(el('div', { class: 'empty' }, el('span', { class: 'spin' })));
+  // Already on this page and only switching files: swap the file on the right and
+  // leave everything else alone, so neither scrollbar jumps back to the top.
+  const here = $('#memoryPage');
+  if (here && here._pick && folder && name) { here._pick(folder, name); return; }
+  if (!here) main.replaceChildren(el('div', { class: 'empty' }, el('span', { class: 'spin' })));
   let data;
   try { data = await api('/api/memory'); }
   catch (e) { main.replaceChildren(el('div', { class: 'empty' }, el('p', { text: e.message }))); return; }
@@ -1566,16 +1575,21 @@ async function memoryView(folder, name) {
 
   if (!folder && data.projects.length) { folder = data.projects[0].folderName; name = data.projects[0].files[0].name; }
   const listEl = el('div', { class: 'memlist' });
+  const fileButtons = [];
+  const keyOf = (fo, na) => fo + '\n' + na;
   for (const p of data.projects) {
     listEl.appendChild(el('h5', { title: p.projectPath || p.folderName, text: p.projectPath ? p.projectPath.split(/[\\/]/).filter(Boolean).pop() : p.folderName }));
     for (const f of p.files) {
-      listEl.appendChild(el('button', {
+      const b = el('button', {
         type: 'button', class: p.folderName === folder && f.name === name ? 'on' : '',
         onclick: () => { location.hash = `#memory/${encodeURIComponent(p.folderName)}/${encodeURIComponent(f.name)}`; },
         title: f.inClaude ? f.name : f.name + ' \u2014 only in your archive',
       }, el('span', { class: 'nm', text: f.name }),
         f.versions ? el('span', { class: 'pill arch', title: `${f.versions} older version(s) in your archive` }, icon('layers'), String(f.versions)) : null,
-        !f.inClaude ? el('span', { class: 'pill arch', title: 'Only in your archive' }, icon('box')) : null));
+        !f.inClaude ? el('span', { class: 'pill arch', title: 'Only in your archive' }, icon('box')) : null);
+      b.dataset.key = keyOf(p.folderName, f.name);
+      fileButtons.push(b);
+      listEl.appendChild(b);
     }
   }
 
@@ -1584,29 +1598,58 @@ async function memoryView(folder, name) {
     el('h1', { text: 'Memory files' }),
     el('p', { class: 'lede' }, 'The notes Claude keeps between chats: who you are, how you like to work, the state of each project. Claude rewrites them as it learns, so your archive keeps every earlier version. ', helpLink(HELP.memory, 'More about memory')),
     el('div', { class: 'memgrid' }, listEl, view));
+  page._pick = async (fo, na) => {
+    for (const b of fileButtons) b.classList.toggle('on', b.dataset.key === keyOf(fo, na));
+    await showMemoryFile(view, fo, na);
+    // A long file you had scrolled down in: show the new file from its top, but
+    // never move the page when its top is already on screen.
+    const gap = view.getBoundingClientRect().top - main.getBoundingClientRect().top;
+    if (gap < 0) main.scrollBy({ top: gap - 16 });
+  };
   main.replaceChildren(page);
   if (folder && name) showMemoryFile(view, folder, name);
 }
 
+const NOTE_KINDS = { user: 'About you', feedback: 'Feedback', project: 'Project note', reference: 'Reference' };
+
+/** The settings block at the top of a memory file, as a small quiet box. */
+function memoryNote(meta) {
+  const kind = meta.type ? (NOTE_KINDS[String(meta.type).toLowerCase()] || meta.type) : null;
+  return el('div', { class: 'memnote' },
+    kind || meta.name ? el('div', { class: 'notehead' }, kind ? el('span', { class: 'pill neutral' }, icon('pin'), kind) : null, meta.name ? el('b', { text: meta.name }) : null) : null,
+    meta.description ? el('p', { class: 'desc', text: meta.description }) : null,
+    meta.rest.length ? el('details', { title: 'Claude Code’s own bookkeeping. You can ignore it.' },
+      el('summary', { text: 'Technical details' }),
+      el('div', { class: 'tech' }, ...meta.rest.map(([k, v]) => el('div', { text: `${k}: ${v}` })))) : null);
+}
+
 async function showMemoryFile(view, folder, name) {
+  const mine = view._seq = (view._seq || 0) + 1;   // a slower, older click must not overwrite a newer one
   let f;
   try { f = await api(`/api/memory/file?folder=${encodeURIComponent(folder)}&name=${encodeURIComponent(name)}`); }
-  catch (e) { view.replaceChildren(el('div', { class: 'empty', text: e.message })); return; }
+  catch (e) { if (mine === view._seq) view.replaceChildren(el('div', { class: 'empty', text: e.message })); return; }
+  if (mine !== view._seq) return;
   const versions = (f.versions && f.versions.versions) || [];
   const content = el('div', { class: 'prose', html: f.html });
+  const noteSlot = el('div');
+  // a version's note, or none (the comparison shows the raw lines, settings and all)
+  const setNote = (meta) => noteSlot.replaceChildren(...(meta ? [memoryNote(meta)] : []));
+  setNote(f.meta);
   const tabs = el('div', { class: 'vtabs' });
   const show = async (btn, hash, compare) => {
     $$('button', tabs).forEach((b) => b.classList.toggle('on', b === btn));
-    if (!hash && !compare) { content.className = 'prose'; content.innerHTML = f.html; return; }
+    if (!hash && !compare) { content.className = 'prose'; content.innerHTML = f.html; setNote(f.meta); return; }
     try {
       if (compare) {
         const older = await api(`/api/memory/version?folder=${encodeURIComponent(folder)}&name=${encodeURIComponent(name)}&v=${versions[versions.length - 1].sha256}`);
         content.className = 'vdiff';
         content.replaceChildren(...lineDiff(older.text, f.text).map(([k, t]) => el('div', { class: k, text: t || ' ' })));
+        setNote(null);
       } else {
         const v = await api(`/api/memory/version?folder=${encodeURIComponent(folder)}&name=${encodeURIComponent(name)}&v=${hash}`);
         content.className = 'prose';
         content.innerHTML = v.html;
+        setNote(v.meta);
       }
     } catch (e) { content.replaceChildren(el('p', { text: e.message })); }
   };
@@ -1625,11 +1668,13 @@ async function showMemoryFile(view, folder, name) {
     tabs.appendChild(cmp);
     tabs.appendChild(helpLink(HELP.versions, 'About versions'));
   }
+  // replaceChildren() prints a null as the word "null", so only pass real nodes.
   view.replaceChildren(
     el('header', {}, icon('brain'), el('b', { text: name }),
       f.source === 'archive' ? el('span', { class: 'pill arch' }, icon('box'), 'Only in your archive') : el('span', { class: 'pill ok' }, icon('check'), 'In Claude Code'),
       versions.length ? el('span', { class: 'pill neutral', text: plural(versions.length, 'older version', 'older versions') }) : null),
-    versions.length ? tabs : null,
+    ...(versions.length ? [tabs] : []),
+    noteSlot,
     content);
 }
 
@@ -1697,7 +1742,9 @@ async function settingsDialog() {
       el('div', { class: 'settings-sec' },
         el('h3', { text: 'Appearance' }),
         el('p', { text: 'Light or dark. Exported chats follow the same choice when you open them in this browser.' }),
-        themeSel)),
+        themeSel,
+        el('p', { style: 'margin-top:14px' }, 'The sidebar can be dragged wider or narrower, shrunk to icons, or closed. ', helpLink(HELP.sidebar, 'How the sidebar works')),
+        el('button', { class: 'btn sm', type: 'button', title: 'Sets the sidebar to open at its usual width. Nothing else changes.', onclick: () => { resetSidebar(); toast('The sidebar is back to its usual size.', 'ok'); } }, 'Put the sidebar back to its usual size'))),
     foot: [helpLink(HELP.settings, 'About settings'), el('div', { class: 'spacer' }), el('button', { class: 'btn', type: 'button', text: 'Close', onclick: () => closeModal(node) })],
   });
   openModal(node);
@@ -1769,6 +1816,110 @@ function toggleTheme() {
   setTheme(dark ? 'light' : 'dark');
 }
 
+// ---------------------------------------------------------------- layout --
+/* The sidebar. A wide window keeps it beside the page: as wide as you drag it,
+   narrowed to an icon strip, or closed. A narrow window (tablet, phone) slides
+   it over the page instead, and closes it again once you have picked something.
+   What you chose is remembered in this browser, so each computer keeps its own. */
+
+const SIDE = { min: 220, max: 560, usual: 300 };
+const rootEl = document.documentElement;
+const wideMQ = matchMedia('(min-width: 900px)');
+let sideLast = store.get('ccx-side-last') === 'compact' ? 'compact' : 'open';   // what "show" brings back
+
+const sideMode = () => rootEl.getAttribute('data-side') || 'open';
+const sideNow = () => Math.round($('#sidebar').getBoundingClientRect().width);
+
+function syncLayout() {
+  const wide = wideMQ.matches;
+  const mode = sideMode();
+  const shown = wide ? mode !== 'closed' : rootEl.getAttribute('data-nav') === 'open';
+  const t = $('#navToggle');
+  t.setAttribute('aria-expanded', String(shown));
+  t.title = shown ? 'Hide the sidebar' : 'Show the sidebar';
+  $('#compactBtn').title = mode === 'compact' ? 'Make the sidebar wide again' : 'Make the sidebar narrow: icons only';
+  const r = $('#sideResizer');
+  r.setAttribute('aria-valuemin', SIDE.min); r.setAttribute('aria-valuemax', SIDE.max);
+  if (shown && wide && mode === 'open') r.setAttribute('aria-valuenow', sideNow());
+}
+
+function setSide(mode) {
+  if (mode === 'open') rootEl.removeAttribute('data-side'); else rootEl.setAttribute('data-side', mode);
+  store.set('ccx-side', mode === 'open' ? null : mode);
+  if (mode !== 'closed') { sideLast = mode; store.set('ccx-side-last', mode === 'compact' ? 'compact' : null); }
+  syncLayout();
+}
+
+function resetSidebar() {
+  rootEl.style.removeProperty('--side-w-user');
+  store.set('ccx-side-w', null);
+  setSide('open');
+}
+
+function setSideWidth(px, save) {
+  const w = Math.round(Math.min(SIDE.max, Math.max(SIDE.min, px)));
+  rootEl.style.setProperty('--side-w-user', w + 'px');
+  if (save) store.set('ccx-side-w', w === SIDE.usual ? null : String(w));
+  syncLayout();
+}
+
+/** Narrow windows: show or hide the sliding panel. */
+function setPanel(open) {
+  if (open) rootEl.setAttribute('data-nav', 'open'); else rootEl.removeAttribute('data-nav');
+  syncLayout();
+  if (open) { const first = $('#sidebar .nav a'); if (first) first.focus(); }
+  else if ($('#sidebar').contains(document.activeElement)) $('#navToggle').focus();
+}
+
+function toggleSidebar() {
+  if (wideMQ.matches) setSide(sideMode() === 'closed' ? sideLast : 'closed');
+  else setPanel(rootEl.getAttribute('data-nav') !== 'open');
+}
+
+function initLayout() {
+  $('#navToggle').addEventListener('click', toggleSidebar);
+  $('#compactBtn').addEventListener('click', () => setSide(sideMode() === 'compact' ? 'open' : 'compact'));
+  $('#railProjects').addEventListener('click', () => setSide('open'));
+  $('#scrim').addEventListener('click', () => setPanel(false));
+  wideMQ.addEventListener('change', () => { setPanel(false); syncLayout(); });
+
+  // buttons that live in the sidebar on a phone press the real ones in the top bar
+  $('#sidebar').addEventListener('click', (e) => {
+    const proxy = e.target.closest('[data-proxy]');
+    if (proxy) { const target = $(proxy.dataset.proxy); if (target) target.click(); }
+    if (!wideMQ.matches && e.target.closest('a[href], [data-proxy], .btn, .storebtn')) setPanel(false);
+  });
+
+  // the drag handle
+  const rz = $('#sideResizer');
+  rz.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    rz.setPointerCapture(e.pointerId);
+    rootEl.classList.add('resizing');
+  });
+  rz.addEventListener('pointermove', (e) => {
+    if (rootEl.classList.contains('resizing')) setSideWidth(e.clientX - $('#sidebar').getBoundingClientRect().left, false);
+  });
+  const endDrag = () => {
+    if (!rootEl.classList.contains('resizing')) return;
+    rootEl.classList.remove('resizing');
+    setSideWidth(sideNow(), true);
+  };
+  rz.addEventListener('pointerup', endDrag);
+  rz.addEventListener('pointercancel', endDrag);
+  rz.addEventListener('dblclick', () => { rootEl.style.removeProperty('--side-w-user'); store.set('ccx-side-w', null); syncLayout(); });   // width only
+  rz.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 64 : 16;
+    const to = e.key === 'ArrowLeft' ? sideNow() - step : e.key === 'ArrowRight' ? sideNow() + step
+      : e.key === 'Home' ? SIDE.min : e.key === 'End' ? SIDE.max : null;
+    if (to == null) return;
+    e.preventDefault();
+    setSideWidth(to, true);
+  });
+  syncLayout();
+}
+
 // ---------------------------------------------------------------- router --
 
 function route() {
@@ -1789,6 +1940,7 @@ function route() {
 window.addEventListener('hashchange', () => {
   if (state.searchQuery && location.hash.startsWith('#chat')) { /* keep the query; leaving search for a result */ }
   else if (state.searchQuery) { state.searchQuery = ''; $('#search').value = ''; }
+  if (rootEl.getAttribute('data-nav') === 'open') setPanel(false);   // picked something: get the panel out of the way
   route();
 });
 
@@ -1820,6 +1972,7 @@ async function refresh() {
 }
 
 function init() {
+  initLayout();
   $('#search').addEventListener('input', onSearchInput);
   $('#rootBtn').addEventListener('click', rootDialog);
   $('#bulkBtn').addEventListener('click', bulkDialog);

@@ -79,6 +79,69 @@ function md(text) {
   catch { return `<p>${escapeHtml(text)}</p>`; }
 }
 
+// ---- memory notes ----------------------------------------------------------
+
+/** Quotes around a value are decoration; a \" or \\ inside double quotes is one character. */
+function unquote(v) {
+  const s = String(v).trim();
+  const q = s[0];
+  if (s.length >= 2 && (q === '"' || q === "'") && s[s.length - 1] === q) {
+    const inner = s.slice(1, -1);
+    return q === '"' ? inner.replace(/\\(["\\])/g, '$1') : inner.replace(/''/g, "'");
+  }
+  return s;
+}
+
+/**
+ * Claude's memory files begin with a block of settings between two lines of
+ * dashes (name, description, type and some bookkeeping). Shown as ordinary
+ * markdown it becomes a rule and one giant heading, so it is split off here
+ * and read as a note.
+ *
+ * Only a block made entirely of settings-shaped lines counts, so a file that
+ * merely opens with a rule and a sentence is left alone. Nested settings are
+ * flattened (the `type` under `metadata:` is just `type`), and the first
+ * occurrence of a key wins.
+ *
+ * @returns {{meta: null | {name, description, type, rest: Array<[string, string]>}, body: string}}
+ */
+function splitFrontMatter(text) {
+  const src = String(text == null ? '' : text);
+  const m = /^\uFEFF?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(src);
+  if (!m) return { meta: null, body: src };
+  const lines = m[1].split(/\r?\n/);
+  const shaped = (l) => !l.trim() || /^\s*#/.test(l) || /^\s+\S/.test(l) || /^[A-Za-z_][\w-]*\s*:/.test(l);
+  if (!lines.every(shaped)) return { meta: null, body: src };
+
+  const pairs = new Map();
+  let open = null;                       // a top-level key whose text continues on the next lines
+  for (const raw of lines) {
+    if (!raw.trim() || /^\s*#/.test(raw)) continue;
+    const kv = /^\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/.exec(raw);
+    const nested = /^\s/.test(raw);
+    if (kv) {
+      const [, key, value] = kv;
+      if (!nested) open = null;
+      if (!nested && /^[>|][+-]?$/.test(value.trim())) { open = key; if (!pairs.has(key)) pairs.set(key, ''); continue; }
+      if (value.trim() !== '' && !pairs.has(key)) pairs.set(key, unquote(value));
+    } else if (open) {
+      pairs.set(open, (pairs.get(open) + ' ' + raw.trim()).trim());
+    }
+  }
+  if (!pairs.size) return { meta: null, body: src };
+
+  const take = (k) => (pairs.has(k) ? pairs.get(k) : null);
+  const meta = { name: take('name'), description: take('description'), type: take('type'), rest: [] };
+  for (const [k, v] of pairs) if (!['name', 'description', 'type'].includes(k) && v !== '') meta.rest.push([k, v]);
+  return { meta, body: src.slice(m[0].length).replace(/^(?:[ \t]*\r?\n)+/, '') };
+}
+
+/** A memory file as the app shows it: the note's settings, and its text as HTML. */
+function memoryNote(text) {
+  const { meta, body } = splitFrontMatter(text);
+  return { meta, html: md(body) };
+}
+
 // ---- pieces --------------------------------------------------------------
 
 function codeBlock(text, lang, label) {
@@ -289,7 +352,7 @@ function renderTranscript(session, opts) {
 }
 
 module.exports = {
-  escapeHtml, escapeAttr, md, codeBlock, highlight, langForFile,
+  escapeHtml, escapeAttr, md, splitFrontMatter, memoryNote, codeBlock, highlight, langForFile,
   renderDiff, renderTodos, renderToolCard, renderBlocks, renderTurn,
   renderTranscript, fmtTime,
   renderToolInput, renderToolResult, basename,

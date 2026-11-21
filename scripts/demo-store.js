@@ -281,7 +281,8 @@ function build() {
       write(path.join(STORE, folderName, 'memory', 'MEMORY.md'),
         '- [User profile](user-profile.md): prefers plain explanations\n- [Money rules](money-rules.md): round once, at the end\n');
       write(path.join(STORE, folderName, 'memory', 'user-profile.md'),
-        '# User profile\n\n- Prefers plain explanations, with the technical detail after.\n- Wants every change tested before it is called done.\n');
+        '---\nname: user-profile\ndescription: "How this person likes to work: plain words first, the detail after"\nmetadata:\n  node_type: memory\n  type: user\n  originSessionId: 00000000-0000-0000-0000-000000000000\n  modified: 2026-07-14T12:00:00.000Z\n---\n\n'
+        + '# User profile\n\n- Prefers plain explanations, with the technical detail after.\n- Wants every change tested before it is called done.\n');
       write(path.join(STORE, folderName, 'memory', 'money-rules.md'),
         '# Money rules\n\n- Keep amounts as numbers until the very end.\n- Round once, after adding up.\n');
     }

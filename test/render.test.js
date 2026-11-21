@@ -134,3 +134,78 @@ test('tool summaries stay on one line', (t) => {
     assert.equal(b.summary.includes('\n'), false, `${b.name} summary must be single-line`);
   }
 });
+
+// ---- memory notes ---------------------------------------------------------
+
+const NOTE = '---\nname: user-profile\ndescription: "Prefers plain words: short, and kind"\nmetadata:\n  node_type: memory\n  type: user\n  originSessionId: abc-123\n---\n\n# Hello\n\nThe text.\n';
+
+test('a memory file\'s settings block is split from its text and read as a note', () => {
+  const { meta, body } = R.splitFrontMatter(NOTE);
+  assert.equal(meta.name, 'user-profile');
+  assert.equal(meta.description, 'Prefers plain words: short, and kind');
+  assert.equal(meta.type, 'user', 'the type nested under metadata is found');
+  assert.deepEqual(meta.rest, [['node_type', 'memory'], ['originSessionId', 'abc-123']]);
+  assert.equal(body, '# Hello\n\nThe text.\n');
+});
+
+test('the settings block never reaches the rendered text', () => {
+  const { html } = R.memoryNote(NOTE);
+  assert.ok(!/originSessionId|node_type|<hr>/.test(html), html);
+  assert.match(html, /<h1>Hello<\/h1>/);
+});
+
+test('a file with no settings block is left exactly as it was', () => {
+  const text = '# Just notes\n\n- one\n- two\n';
+  const r = R.splitFrontMatter(text);
+  assert.equal(r.meta, null);
+  assert.equal(r.body, text);
+});
+
+test('an opening line of dashes that is not a settings block is not mistaken for one', () => {
+  const text = '---\nJust a thought, not a setting.\n---\nMore text\n';
+  const r = R.splitFrontMatter(text);
+  assert.equal(r.meta, null);
+  assert.equal(r.body, text, 'nothing is cut away');
+});
+
+test('a settings block that never closes is left alone', () => {
+  // every line looks like a setting, so only the missing closing line can tell
+  const text = '---\nname: half\ndescription: never ends\n';
+  const r = R.splitFrontMatter(text);
+  assert.equal(r.meta, null);
+  assert.equal(r.body, text);
+});
+
+test('when a setting appears twice, the first one is the one that counts', () => {
+  const { meta } = R.splitFrontMatter('---\nname: first\nmetadata:\n  name: second\n  type: user\n---\nx\n');
+  assert.equal(meta.name, 'first');
+  assert.equal(meta.type, 'user');
+});
+
+test('Windows line endings, a byte-order mark and single quotes are handled', () => {
+  const text = '\uFEFF---\r\nname: \'it\'\'s fine\'\r\ntype: project\r\n---\r\n\r\nBody\r\n';
+  const { meta, body } = R.splitFrontMatter(text);
+  assert.equal(meta.name, "it's fine");
+  assert.equal(meta.type, 'project');
+  assert.equal(body, 'Body\r\n');
+});
+
+test('settings the app does not know about are kept as technical details', () => {
+  const { meta, body } = R.splitFrontMatter('---\nfoo: 1\nbar: two\n---\nText\n');
+  assert.equal(meta.name, null);
+  assert.equal(meta.type, null);
+  assert.deepEqual(meta.rest, [['foo', '1'], ['bar', 'two']]);
+  assert.equal(body, 'Text\n');
+});
+
+test('a description that continues over several lines is joined into one', () => {
+  const { meta } = R.splitFrontMatter('---\nname: n\ndescription: >\n  first part\n  second part\n---\nx\n');
+  assert.equal(meta.description, 'first part second part');
+});
+
+test('a block that mixes a setting-like line with ordinary sentences is not a settings block', () => {
+  const text = '---\nNote: remember this\nthen an ordinary sentence follows\n---\nMore text\n';
+  const r = R.splitFrontMatter(text);
+  assert.equal(r.meta, null);
+  assert.equal(r.body, text, 'nothing is cut away');
+});

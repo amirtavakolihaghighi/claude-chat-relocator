@@ -150,6 +150,33 @@ async function main() {
       await shot('relocate', 'light');
       await evaluate("document.querySelector('.modal .x').click()");
     });
+    await step('Browse hands the chosen folder back to the dialog', async () => {
+      await evaluate("location.hash = '#home'");
+      await until("document.querySelector('.issue .btn.primary')", 'issue card');
+      await evaluate("document.querySelector('.issue .btn.primary').click()");
+      await until("document.querySelector('.modal .about')", 'the relocate dialog');
+      await evaluate("[...document.querySelectorAll('.modal .inrow .btn')].find((b) => /Browse/.test(b.textContent)).click()");
+      await until("document.querySelectorAll('.modal').length === 2 && document.querySelector('.pickerlist')", 'the folder picker');
+      // The project's old folder may not exist, so the list can start out empty: go Up to the top first.
+      // (The spinner sits inside a .sidenote, so "loaded" means no spinner, not just "a note is showing".)
+      const loaded = "!document.querySelector('.pickerlist .spin') && document.querySelector('.pickerlist button, .pickerlist .sidenote')";
+      await until(loaded, 'the first list');
+      if (!(await evaluate("!!document.querySelector('.pickerlist button')"))) {
+        await evaluate("[...document.querySelectorAll('.modal .pickerbar .btn')].pop().click()");
+        await until("!document.querySelector('.pickerlist .spin') && document.querySelector('.pickerlist button')", 'the top-level folders');
+      }
+      const pathBox = "[...document.querySelectorAll('.modal')].pop().querySelector('.field input')";
+      const before = await evaluate(`${pathBox}.value`);
+      await evaluate("document.querySelector('.pickerlist button').click()");
+      await until(`${loaded} && ${pathBox}.value !== ${JSON.stringify(before)}`, 'the folder to open');
+      const chosen = await evaluate(`${pathBox}.value`);
+      if (!chosen) throw new Error('the picker never showed a path');
+      await evaluate("[...document.querySelectorAll('.modal')].pop().querySelector('.btn.primary').click()");
+      await until("document.querySelectorAll('.modal').length === 1", 'the picker to close');
+      const got = await evaluate("document.querySelector('.modal .inrow input').value");
+      if (got !== chosen) throw new Error(`picked "${chosen}" but the dialog got "${got}"`);
+      await evaluate("document.querySelector('.modal .x').click()");
+    });
     await step('the archive page shows the rescued chat and the log', async () => {
       await evaluate("location.hash = '#archive'");
       await until("document.querySelector('.statusbar') && document.querySelectorAll('.logrow').length > 0", 'archive page');
@@ -164,6 +191,139 @@ async function main() {
       await evaluate("[...document.querySelectorAll('.vtabs button')].find((b) => /What changed/.test(b.textContent)).click()");
       await until("document.querySelector('.vdiff .gone') && document.querySelector('.vdiff .new')", 'the comparison');
       await shot('memory', 'light');
+    });
+    await step('switching memory files keeps the page where it is and prints no stray "null"', async () => {
+      await evaluate("location.hash = '#help'");
+      await until("document.querySelector('.helpdoc')", 'help page');
+      await evaluate("location.hash = '#memory'");
+      await until("document.querySelectorAll('.memlist button').length >= 3 && document.querySelector('.memview header')", 'memory page');
+      // make the page tall enough to scroll, then scroll a little
+      await evaluate("window.__list = document.querySelector('.memlist'); document.querySelector('.memview').style.minHeight = '2500px'; document.querySelector('#main').scrollTop = 100");
+      for (const nm of ['user-profile', 'MEMORY', 'money-rules']) {
+        await evaluate(`[...document.querySelectorAll('.memlist button')].find((b) => b.textContent.startsWith('${nm}')).click()`);
+        await until(`document.querySelector('.memlist button.on').textContent.startsWith('${nm}') && document.querySelector('.memview header b').textContent.startsWith('${nm}')`, nm);
+        const r = await evaluate("({ same: window.__list === document.querySelector('.memlist'), top: document.querySelector('#main').scrollTop, stray: [...document.querySelector('.memview').childNodes].filter((n) => n.nodeType === 3).map((n) => n.nodeValue) })");
+        if (!r.same) throw new Error(`${nm}: the file list was rebuilt, so its scrollbar goes back to the top`);
+        if (r.top !== 100) throw new Error(`${nm}: the page jumped from 100 to ${r.top}`);
+        if (r.stray.length) throw new Error(`${nm}: stray text in the file view: ${JSON.stringify(r.stray)}`);
+        const note = await evaluate("(() => { const n = document.querySelector('.memview .memnote'); if (!n) return null; const q = (s) => n.querySelector(s); return { label: q('.pill') && q('.pill').textContent, name: q('b') && q('b').textContent, desc: q('.desc') && q('.desc').textContent, open: q('details').open, prose: document.querySelector('.memview .prose').innerText }; })()");
+        if (nm !== 'user-profile') { if (note) throw new Error(`${nm}: a note box appeared on a file with no settings block`); continue; }
+        if (!note) throw new Error('user-profile: its settings block did not become a note box');
+        if (note.label !== 'About you' || note.name !== 'user-profile' || !/plain words first/.test(note.desc)) throw new Error('the note box shows the wrong things: ' + JSON.stringify(note));
+        if (note.open) throw new Error('the technical details should start folded');
+        if (/originSessionId|node_type|name: user-profile/.test(note.prose)) throw new Error('the settings block is still in the text: ' + note.prose.slice(0, 80));
+        await evaluate("document.querySelector('.memnote summary').click()");
+        const tech = await evaluate("document.querySelector('.memnote .tech').innerText");
+        if (!/originSessionId: 0000/.test(tech) || !/node_type: memory/.test(tech)) throw new Error('technical details are missing: ' + tech);
+      }
+    });
+    // ---- the sidebar and the window sizes
+    const viewport = (w, h) => send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false });
+    const sideBox = () => evaluate("(() => { const q = (s) => document.querySelector(s); const s = q('#sidebar'); const r = s.getBoundingClientRect(); const cs = getComputedStyle(s); return { w: Math.round(r.width), left: Math.round(r.left), mainLeft: Math.round(q('#main').getBoundingClientRect().left), shown: cs.display !== 'none' && cs.visibility !== 'hidden' && r.right > 0, saved: localStorage.getItem('ccx-side-w'), mode: localStorage.getItem('ccx-side') }; })()");
+    const reload = async () => { await send('Page.reload'); await until("document.querySelectorAll('.proj').length >= 5", 'the page after a reload'); };
+    const mouse = (type, x, y) => send('Input.dispatchMouseEvent', { type, x, y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1 });
+    const expect = (what, got, want) => { if (got !== want) throw new Error(`${what}: expected ${want}, got ${got}`); };
+    const near = (what, got, want, tol = 3) => { if (Math.abs(got - want) > tol) throw new Error(`${what}: expected about ${want}, got ${got}`); };
+
+    await step('wide window: drag the sidebar wider, and it stays that way after a reload', async () => {
+      await viewport(1440, 1000);
+      await evaluate("location.hash = '#home'; localStorage.clear()");
+      await reload();
+      let b = await sideBox();
+      expect('usual width', b.w, 300); expect('page starts after the sidebar', b.mainLeft, 300);
+      await mouse('mousePressed', 300, 500); await mouse('mouseMoved', 360, 500); await mouse('mouseMoved', 420, 500); await mouse('mouseReleased', 420, 500);
+      b = await sideBox();
+      near('width after dragging', b.w, 420); expect('the width is saved', b.saved, String(b.w));
+      await reload();
+      b = await sideBox();
+      near('width after a reload', b.w, 420);
+      await mouse('mousePressed', b.w, 500); await mouse('mouseMoved', 100, 500); await mouse('mouseReleased', 100, 500);
+      expect('the smallest width', (await sideBox()).w, 220);
+      await evaluate("document.querySelector('#sideResizer').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))");
+      b = await sideBox();
+      expect('double-click puts it back', b.w, 300); expect('and forgets the saved width', b.saved, null);
+      await evaluate("document.querySelector('#sideResizer').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }))");
+      expect('an arrow key with Shift', (await sideBox()).w, 364);
+      await evaluate("document.querySelector('#sideResizer').dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }))");
+      expect('Home', (await sideBox()).w, 220);
+      await evaluate("document.querySelector('#sideResizer').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))");
+    });
+    await step('wide window: narrow the sidebar to icons, close it, bring it back', async () => {
+      await evaluate("document.querySelector('#compactBtn').click()");
+      let b = await sideBox();
+      expect('icon strip width', b.w, 64); expect('page starts after the strip', b.mainLeft, 64); expect('mode is saved', b.mode, 'compact');
+      if (await evaluate("[...document.querySelectorAll('#sidebar .nl')].some((n) => n.offsetParent)")) throw new Error('labels are still showing in the icon strip');
+      if (!(await evaluate("!!document.querySelector('#railProjects').offsetParent"))) throw new Error('the Projects icon is missing from the strip');
+      await evaluate("document.querySelector('#navToggle').click()");
+      b = await sideBox();
+      expect('closed: nothing shows', b.shown, false); expect('closed: page starts at the left edge', b.mainLeft, 0);
+      await reload();
+      expect('closed stays closed after a reload', (await sideBox()).shown, false);
+      await evaluate("document.querySelector('#navToggle').click()");
+      expect('showing it again brings back the icon strip', (await sideBox()).w, 64);
+      await evaluate("document.querySelector('#railProjects').click()");
+      b = await sideBox();
+      expect('the Projects icon makes it wide again', b.w, 300); expect('and the mode is forgotten', b.mode, null);
+    });
+    await step('Settings puts the sidebar back to its usual size', async () => {
+      await mouse('mousePressed', 300, 500); await mouse('mouseMoved', 400, 500); await mouse('mouseReleased', 400, 500);
+      await evaluate("document.querySelector('#compactBtn').click()");
+      expect('the strip is on', (await sideBox()).w, 64);
+      await evaluate("document.querySelector('#settingsBtn').click()");
+      await until("[...document.querySelectorAll('.modal .btn')].some((b) => /usual size/.test(b.textContent))", 'the reset button');
+      await evaluate("[...document.querySelectorAll('.modal .btn')].find((b) => /usual size/.test(b.textContent)).click()");
+      const b = await sideBox();
+      expect('back to the usual width', b.w, 300); expect('and nothing is left saved', `${b.saved}/${b.mode}`, 'null/null');
+      await evaluate("document.querySelector('.modal .x').click()");
+    });
+    await step('phone: the sidebar slides over the page, and the top buttons move into it', async () => {
+      await viewport(390, 844);
+      await wait(300);   // let the browser announce the new size, as it would between a person's resize and click
+      await until("document.querySelector('#sidebar') && !document.documentElement.getAttribute('data-nav')", 'the phone layout');
+      let b = await sideBox();
+      expect('the panel starts hidden', b.shown, false);
+      expect('the page uses the whole width', b.mainLeft, 0);
+      if (await evaluate("!!document.querySelector('#bulkBtn').offsetParent")) throw new Error('"Move many projects" is still in the top bar on a phone');
+      await evaluate("document.querySelector('#navToggle').click()");
+      await wait(350);   // it slides in
+      b = await sideBox();
+      expect('the panel opens', b.shown, true); expect('over the page', b.left, 0);
+      if (!(await evaluate("getComputedStyle(document.querySelector('#scrim')).display !== 'none' && document.querySelector('#scrim').getBoundingClientRect().width > 300"))) throw new Error('no dimmed backdrop behind the panel');
+      if (!(await evaluate("[...document.querySelectorAll('#sidebar .tools button')].every((n) => n.offsetParent)"))) throw new Error('the tools are not in the panel');
+      await evaluate("document.querySelector('[data-proxy=\"#historyBtn\"]').click()");
+      await until("document.querySelector('.modal .about')", 'Undo history from the panel');
+      expect('the panel gets out of the way of the dialog', await evaluate("document.documentElement.getAttribute('data-nav')"), null);
+      await evaluate("document.querySelector('.modal .x').click()");
+      await evaluate("document.querySelector('#navToggle').click(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))");
+      expect('Esc closes the panel', await evaluate("document.documentElement.getAttribute('data-nav')"), null);
+      await evaluate("document.querySelector('#navToggle').click(); document.querySelector('#scrim').click()");
+      expect('clicking outside closes the panel', await evaluate("document.documentElement.getAttribute('data-nav')"), null);
+      await evaluate("document.querySelector('#navToggle').click(); document.querySelector('[data-nav=\"archive\"]').click()");
+      await until("document.querySelector('.statusbar')", 'the archive page');
+      expect('choosing a page closes the panel', await evaluate("document.documentElement.getAttribute('data-nav')"), null);
+    });
+    await step('every page fits at laptop, tablet and phone sizes, with nothing running off the side', async () => {
+      const chat = await evaluate("(async () => { const p = await (await fetch('/api/projects')).json(); const x = p.projects.find((q) => q.sessions.some((s) => /rounding/i.test(s.title))); const s = x.sessions.find((y) => /rounding/i.test(y.title)); return '#chat/' + encodeURIComponent(x.folderName) + '/' + s.sessionId; })()");
+      for (const [w, h] of [[1024, 700], [768, 1024], [390, 844], [320, 640]]) {
+        await viewport(w, h);
+        for (const page of ['#home', '#archive', '#memory', '#help', chat]) {
+          await evaluate(`location.hash = ${JSON.stringify(page)}`);
+          await wait(450);
+          await until("document.querySelector('#main') && !document.querySelector('#main .spin')", `${page} at ${w}`);
+          const over = await evaluate("(() => { const m = document.querySelector('#main'); const d = document.documentElement; return { page: d.scrollWidth - innerWidth, main: m.scrollWidth - m.clientWidth }; })()");
+          if (over.page > 1 || over.main > 1) throw new Error(`${page.slice(0, 20)} at ${w}px wide overflows sideways (page ${over.page}px, content ${over.main}px)`);
+        }
+      }
+    });
+    await step('a window smaller than the smallest layout scrolls instead of cutting things off', async () => {
+      await viewport(280, 360);
+      await wait(300);
+      const r = await evaluate("(() => { scrollTo(60, 40); const e = document.scrollingElement; return { wide: e.scrollWidth > innerWidth, tall: e.scrollHeight > innerHeight, x: scrollX, y: scrollY }; })()");
+      if (!r.wide || !r.tall) throw new Error('the page does not scroll in a tiny window ' + JSON.stringify(r));
+      if (r.x < 1 || r.y < 1) throw new Error('scrolling does not move the page ' + JSON.stringify(r));
+      await evaluate("scrollTo(0, 0)");
+      await viewport(1440, 1000);
+      await evaluate("location.hash = '#home'");
     });
     await step('help opens at a message code, in the side panel and as a page', async () => {
       await evaluate("location.hash = '#help/w-live'");

@@ -4,7 +4,9 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--sans); overflow: hidden; font-variant-ligatures: none; }
+/* The page itself only scrolls when the window is smaller than the smallest
+   layout (see .app min-size below). Everywhere else, .main scrolls by itself. */
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--sans); overflow: auto; font-variant-ligatures: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -3px; }
 svg.i.sm { width: 15px; height: 15px; vertical-align: -2px; }
@@ -39,19 +41,27 @@ a { color: var(--accent); }
 .helplink svg.i { width: 15px; height: 15px; }
 
 /* ----------------------------------------------------------------- layout -- */
-.app { display: grid; grid-template-columns: 300px minmax(0, 1fr); grid-template-rows: 56px minmax(0, 1fr); height: 100vh; }
-.top { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--surface); border-bottom: 1px solid var(--line); z-index: 40; }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 268px; font-weight: 650; font-size: 15.5px; color: var(--text); text-decoration: none; }
+/* How wide the sidebar is: what you dragged it to (saved by the app), or 300px;
+   an icon strip when narrowed; nothing when closed. Never more than half the window. */
+html { --side-cur: min(var(--side-w-user, 300px), 50vw); }
+html[data-side="compact"] { --side-cur: 64px; }
+html[data-side="closed"] { --side-cur: 0px; }
+
+/* Below 320 x 420 the layout stops shrinking and the page scrolls instead. */
+.app { display: grid; grid-template-columns: var(--side-cur) minmax(0, 1fr); grid-template-rows: 56px minmax(0, 1fr); height: 100vh; height: 100dvh; min-width: 320px; min-height: 420px; }
+.top { grid-column: 1 / -1; grid-row: 1; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--surface); border-bottom: 1px solid var(--line); z-index: 40; }
+.brand { display: flex; align-items: center; gap: 10px; flex: none; white-space: nowrap; font-weight: 650; font-size: 15.5px; color: var(--text); text-decoration: none; }
 .logo { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
 .logo svg.i { width: 16px; height: 16px; }
-.search { flex: 1 1 360px; max-width: 520px; display: flex; align-items: center; gap: 8px; background: var(--sunk); border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; height: 36px; color: var(--text-3); }
+.top > .btn, .top > .menuwrap { flex: none; }
+.search { flex: 1 1 360px; min-width: 0; max-width: 520px; display: flex; align-items: center; gap: 8px; background: var(--sunk); border: 1px solid var(--line); border-radius: 9px; padding: 0 10px; height: 36px; color: var(--text-3); }
 .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 .search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; color: var(--text); font-size: 14.5px; }
 .search kbd { font: 12px var(--mono); border: 1px solid var(--line-2); border-radius: 5px; padding: 0 6px; }
 .search:focus-within kbd { display: none; }
 
 .menuwrap { position: relative; }
-.menu { position: absolute; right: 0; top: 40px; width: 330px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 60; }
+.menu { position: absolute; right: 0; top: 40px; width: min(330px, calc(100vw - 20px)); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 6px; z-index: 60; }
 .menu[hidden] { display: none; }
 .menu button { display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left; border: 0; background: none; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
 .menu button:hover { background: var(--hover); }
@@ -60,11 +70,37 @@ a { color: var(--accent); }
 .menu small { display: block; color: var(--text-3); font-size: 13px; line-height: 1.4; }
 
 /* ---------------------------------------------------------------- sidebar -- */
-.side { background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-.nav { padding: 10px 10px 0; }
-.nav a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--text-2); text-decoration: none; font-weight: 550; }
-.nav a:hover { background: var(--hover); color: var(--text); }
+/* The sidebar scrolls as a whole when the window is too short for all of it;
+   the project list keeps at least 150px, and scrolls by itself when there is room. */
+.side { grid-column: 1; grid-row: 2; background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow-x: hidden; overflow-y: auto; }
+.sidehead { display: flex; align-items: center; padding: 8px 10px 0 20px; flex: none; }
+.sidelabel { flex: 1; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 650; }
+.nav { padding: 4px 10px 0; flex: none; }
+.nav a, .nav button { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--text-2); text-decoration: none; font-weight: 550; width: 100%; text-align: left; background: none; border: 0; cursor: pointer; }
+.nav a:hover, .nav button:hover { background: var(--hover); color: var(--text); }
 .nav a.on { background: var(--accent-bg); color: var(--accent); }
+.railonly { display: none !important; }
+.tools { display: none; flex: none; }
+
+/* the drag handle on the sidebar's right edge */
+.resizer { grid-column: 1; grid-row: 2; justify-self: end; width: 9px; margin-right: -4px; z-index: 35; cursor: col-resize; touch-action: none; position: relative; outline: none; }
+.resizer::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: transparent; transition: background .12s; }
+.resizer:hover::after, .resizer:focus-visible::after, html.resizing .resizer::after { background: var(--accent); }
+html.resizing, html.resizing * { cursor: col-resize !important; user-select: none !important; }
+.scrim { display: none; }
+
+/* Wide windows: the sidebar stays beside the page. Narrow it to icons or close it. */
+@media (min-width: 900px) {
+  html[data-side="compact"] .sidelabel, html[data-side="compact"] .nav .nl, html[data-side="compact"] .nav .count,
+  html[data-side="compact"] .side h4, html[data-side="compact"] #filters, html[data-side="compact"] .projects,
+  html[data-side="compact"] .storebtn, html[data-side="compact"] .resizer { display: none; }
+  html[data-side="compact"] .sidehead { justify-content: center; padding: 8px 0 0; }
+  html[data-side="compact"] .nav { padding: 4px 8px 0; }
+  html[data-side="compact"] .nav a, html[data-side="compact"] .nav button { justify-content: center; padding: 10px 0; }
+  html[data-side="compact"] .railonly { display: flex !important; }
+  html[data-side="compact"] #compactBtn svg { transform: scaleX(-1); }
+  html[data-side="closed"] .side, html[data-side="closed"] .resizer { display: none; }
+}
 .nav .count { margin-left: auto; font-size: 12.5px; color: var(--text-3); font-weight: 500; }
 .nav a.on .count { color: var(--accent); }
 .side h4 { margin: 16px 20px 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 650; display: flex; align-items: center; }
@@ -73,7 +109,7 @@ a { color: var(--accent); }
 .seg button:hover { background: var(--hover); }
 .seg button.on { background: var(--text); color: var(--surface); border-color: var(--text); }
 .seg button[hidden] { display: none; }
-.projects { overflow-y: auto; flex: 1; padding: 0 10px 20px; min-height: 0; }
+.projects { overflow-y: auto; flex: 1 1 auto; padding: 0 10px 20px; min-height: 150px; }
 
 .proj { margin-bottom: 1px; }
 .proj > .head { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; cursor: pointer; width: 100%; background: none; border: 0; text-align: left; }
@@ -93,7 +129,7 @@ a { color: var(--accent); }
 .chat .m { font-size: 12.5px; color: var(--text-3); margin-top: 2px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .projacts { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 10px 2px 34px; }
 .sidenote { padding: 18px 14px; color: var(--text-3); font-size: 13.5px; text-align: center; }
-.storebtn { border: 0; border-top: 1px solid var(--line); background: var(--surface); padding: 9px 16px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 1px; }
+.storebtn { flex: none; border: 0; border-top: 1px solid var(--line); background: var(--surface); padding: 9px 16px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 1px; }
 .storebtn:hover { background: var(--hover); }
 .storebtn .k { font-size: 12px; color: var(--text-3); font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
 .storebtn .v { font: 12.5px var(--mono); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
@@ -109,7 +145,7 @@ a { color: var(--accent); }
 button.pill { cursor: help; }
 
 /* ------------------------------------------------------------------- main -- */
-.main { overflow-y: auto; position: relative; min-height: 0; scroll-behavior: auto; }
+.main { grid-column: 2; grid-row: 2; overflow-y: auto; position: relative; min-height: 0; scroll-behavior: auto; }
 .empty { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-3); gap: 10px; padding: 40px; text-align: center; }
 .page { max-width: 1040px; margin: 0 auto; padding: 32px 40px 120px; }
 .page h1 { font-size: 28px; line-height: 1.25; margin: 0 0 6px; font-weight: 700; letter-spacing: -.015em; }
@@ -232,6 +268,14 @@ button.lrow:hover { background: var(--hover); }
 .vtabs button { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 3px 10px; font-size: 13px; cursor: pointer; color: var(--text-2); }
 .vtabs button.on { border-color: var(--arch); color: var(--arch); background: var(--arch-bg); font-weight: 600; }
 .memview .prose { padding: 16px 20px; margin: 0; font-size: 15px; }
+/* the settings block at the top of a note: what kind it is, its name and one-line description */
+.memnote { margin: 16px 20px 0; border: 1px solid var(--line); background: var(--sunk); border-radius: 10px; padding: 11px 14px; }
+.memnote .notehead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.memnote .notehead b { font-size: 15px; overflow-wrap: anywhere; }
+.memnote .desc { margin: 6px 0 0; color: var(--text-2); font-size: 14.5px; }
+.memnote details { margin-top: 8px; font-size: 13px; color: var(--text-3); }
+.memnote summary { cursor: pointer; color: var(--accent); font-weight: 550; }
+.memnote .tech { font-family: var(--mono); margin-top: 6px; line-height: 1.7; overflow-wrap: anywhere; }
 .vdiff { font: 13.5px/1.65 var(--mono); padding: 8px 0; }
 .vdiff div { padding: 1px 18px; white-space: pre-wrap; word-break: break-word; }
 .vdiff .gone { background: var(--del-bg); }
@@ -354,16 +398,84 @@ button.maprow:hover { background: var(--hover); }
 .spin { display: inline-block; width: 16px; height: 16px; vertical-align: -3px; border: 2px solid var(--line-2); border-top-color: var(--accent); border-radius: 50%; animation: sp .7s linear infinite; }
 @keyframes sp { to { transform: rotate(360deg); } }
 
+/* ------------------------------------------------------------ responsive ----
+   Four layouts, by window width:
+     desktop  1150px and up   everything with its words; sidebar beside the page
+     laptop    900 - 1149     same, with the top buttons shrunk to icons
+     tablet    760 -  899     the sidebar slides over the page instead of squeezing it
+     phone     under 760      the rarer top buttons move into the sidebar, one column
+   Short windows shrink the chat header. Below 320 x 420 the page scrolls. */
+
 @media (max-width: 1150px) {
   .top .btn .lbl { display: none; }
+  .bname { display: none; }
   .cols2, .memgrid, .helpgrid { grid-template-columns: minmax(0, 1fr); }
-  .helptoc, .memlist { position: static; max-height: none; }
+  .helptoc, .memlist { position: static; max-height: 240px; }
   .about .cols { grid-template-columns: minmax(0, 1fr); }
   .about .col + .col { border-left: 0; border-top: 1px solid var(--accent-line); }
 }
-@media (max-width: 860px) {
-  .app { grid-template-columns: 240px minmax(0, 1fr); }
-  .brand { min-width: 0; } .bname { display: none; }
-  .page, .convo, .chathead .in, .pinned .in { padding-left: 20px; padding-right: 20px; }
+
+/* tablet and phone: the sidebar is a panel that slides over the page */
+@media (max-width: 899.98px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .main { grid-column: 1; }
+  .bname { display: none; }
+  .page, .convo, .chathead .in, .pinned .in { padding-left: 24px; padding-right: 24px; }
+  .side { position: fixed; z-index: 80; top: 56px; left: 0; bottom: 0; width: min(var(--side-w-user, 300px), 88vw); box-shadow: var(--shadow-lg);
+    transform: translateX(-104%); visibility: hidden; transition: transform .2s ease, visibility 0s linear .2s; }
+  html[data-nav="open"] .side { transform: none; visibility: visible; transition: transform .2s ease; }
+  html[data-nav="open"] .scrim { display: block; position: fixed; inset: 56px 0 0 0; z-index: 70; background: rgba(20, 18, 14, .4); }
+  .resizer, #compactBtn { display: none; }
   .lrow, .lhead { grid-template-columns: minmax(0, 1fr) 110px; } .lrow .d, .lrow .n, .lhead .d, .lhead .n { display: none; }
+}
+
+/* phone: the three rarer top buttons live in the sidebar instead */
+@media (max-width: 759.98px) {
+  .top { gap: 6px; padding: 0 10px; }
+  #bulkBtn, #historyBtn, .top .menuwrap { display: none; }
+  .tools { display: block; }
+  .search kbd { display: none; }
+  .page, .convo, .chathead .in, .pinned .in { padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 559.98px) {
+  .page { padding-top: 20px; padding-bottom: 96px; }
+  .page h1 { font-size: 24px; }
+  .lede { font-size: 15px; margin-bottom: 20px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 26px; }
+  .tile { padding: 12px 14px; } .tile .num { font-size: 26px; }
+  .issue { padding: 14px; gap: 12px; grid-template-columns: 34px minmax(0, 1fr); }
+  .issue .badge-ic { width: 34px; height: 34px; }
+  .preview .pr { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .convo { padding-top: 18px; padding-bottom: 120px; }
+  .chathead .in { padding-top: 12px; padding-bottom: 10px; }
+  .chathead h1 { font-size: 19px; }
+  .modal-root { padding: 8px; }
+  .modal { max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); }
+  .modal > header { padding: 14px 16px 10px; } .mbody { padding: 0 16px 8px; } .mfoot { padding: 11px 16px; }
+  .about .more { padding: 0 14px 10px; }
+  .setup { padding: 18px 16px; }
+}
+@media (max-width: 479.98px) {
+  .brand { display: none; }   /* Home is in the sidebar, and the search needs the room */
+}
+
+/* fingers: bigger things to press */
+@media (pointer: coarse) {
+  .btn { height: 40px; } .btn.sm { height: 36px; } .iconbtn { width: 40px; } .btn.sm.iconbtn { width: 36px; }
+  .nav a, .nav button { padding-top: 11px; padding-bottom: 11px; }
+  .proj > .head { padding-top: 10px; padding-bottom: 10px; }
+}
+
+/* short windows: the chat's header would otherwise take most of the screen, so
+   it keeps the title and the buttons and drops the path and the counts
+   (both are in Details) */
+@media (max-height: 640px) {
+  .chathead .in { padding-top: 8px; padding-bottom: 8px; }
+  .chathead .crumb, .chathead .metaline { display: none; }
+  .chathead h1 { font-size: 18px; margin: 0 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chatbar { margin-top: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side { transition: none !important; }
 }

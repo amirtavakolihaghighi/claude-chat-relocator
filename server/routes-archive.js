@@ -280,14 +280,16 @@ function register(app, store, route) {
     else if (v && v.exists()) { text = v.readText(rel); source = 'archive'; }
     if (text == null) { const e = new Error('No such memory file'); e.status = 404; throw e; }
     const versions = v && v.exists() ? v.versionsOf(rel) : null;
-    res.json({ folder, name, rel, source, text, html: R.md(text), versions });
+    const note = R.memoryNote(text);
+    res.json({ folder, name, rel, source, text, html: note.html, meta: note.meta, versions });
   }));
 
   app.get('/api/memory/version', route((req, res) => {
     const v = needVault();
     const rel = memoryRel(String(req.query.folder || ''), String(req.query.name || ''));
     const text = v.readText(rel, String(req.query.v || ''));
-    res.json({ rel, text, html: R.md(text) });
+    const note = R.memoryNote(text);
+    res.json({ rel, text, html: note.html, meta: note.meta });
   }));
 
   app.get('/api/help', route((req, res) => res.json(helpPage())));
