@@ -304,16 +304,25 @@ async function main() {
     });
     await step('every page fits at laptop, tablet and phone sizes, with nothing running off the side', async () => {
       const chat = await evaluate("(async () => { const p = await (await fetch('/api/projects')).json(); const x = p.projects.find((q) => q.sessions.some((s) => /rounding/i.test(s.title))); const s = x.sessions.find((y) => /rounding/i.test(y.title)); return '#chat/' + encodeURIComponent(x.folderName) + '/' + s.sessionId; })()");
-      for (const [w, h] of [[1024, 700], [768, 1024], [390, 844], [320, 640]]) {
-        await viewport(w, h);
-        for (const page of ['#home', '#archive', '#memory', '#help', chat]) {
-          await evaluate(`location.hash = ${JSON.stringify(page)}`);
-          await wait(450);
-          await until("document.querySelector('#main') && !document.querySelector('#main .spin')", `${page} at ${w}`);
-          const over = await evaluate("(() => { const m = document.querySelector('#main'); const d = document.documentElement; return { page: d.scrollWidth - innerWidth, main: m.scrollWidth - m.clientWidth }; })()");
-          if (over.page > 1 || over.main > 1) throw new Error(`${page.slice(0, 20)} at ${w}px wide overflows sideways (page ${over.page}px, content ${over.main}px)`);
+      // Text is wider on some systems than on others (Linux fonts are wider than Windows ones), so
+      // test with deliberately wide fonts: what fits then fits everywhere.
+      await evaluate("(() => { const s = document.createElement('style'); s.id = 'wide-fonts'; s.textContent = \"body, button, input, select, textarea, h1, h2, h3 { font-family: Verdana, 'DejaVu Sans', sans-serif !important } .mono, code, pre, .path { font-family: 'Courier New', 'DejaVu Sans Mono', monospace !important }\"; document.head.appendChild(s); })()");
+      const found = [];
+      try {
+        for (const [w, h] of [[1024, 700], [768, 1024], [390, 844], [320, 640]]) {
+          await viewport(w, h);
+          for (const page of ['#home', '#archive', '#memory', '#help', chat]) {
+            await evaluate(`location.hash = ${JSON.stringify(page)}`);
+            await wait(450);
+            await until("document.querySelector('#main') && !document.querySelector('#main .spin')", `${page} at ${w}`);
+            const over = await evaluate("(() => { const m = document.querySelector('#main'); const mr = m.getBoundingClientRect(); const out = { page: document.documentElement.scrollWidth - innerWidth, main: m.scrollWidth - m.clientWidth, who: '' }; if (out.main > 1) for (const e of m.querySelectorAll('*')) { const r = e.getBoundingClientRect(); if (!r.width || getComputedStyle(e).display === 'none' || r.right <= mr.right + 1) continue; let clipped = false; for (let n = e.parentElement; n && n !== m; n = n.parentElement) if (getComputedStyle(n).overflowX !== 'visible' && n.getBoundingClientRect().right <= mr.right + 1) { clipped = true; break; } if (!clipped) { out.who = e.tagName.toLowerCase() + '.' + String(e.className).slice(0, 30) + ' \"' + e.textContent.trim().slice(0, 30) + '\"'; break; } } return out; })()");
+            if (over.page > 1 || over.main > 1) found.push(`${page.slice(0, 20)} at ${w}px wide runs off the side (page ${over.page}px, content ${over.main}px) at ${over.who || '?'}`);
+          }
         }
+      } finally {
+        await evaluate("document.getElementById('wide-fonts').remove()");
       }
+      if (found.length) throw new Error(found.join('; '));
     });
     await step('a window smaller than the smallest layout scrolls instead of cutting things off', async () => {
       await viewport(280, 360);

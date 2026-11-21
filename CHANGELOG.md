@@ -46,6 +46,10 @@ nothing you used has moved, and everything you saved keeps working.
   list is no longer rebuilt, so it keeps its place, and so does the page.
 - **The top bar spilled off the right edge** of narrow windows, and its
   **Import / Export** button showed only an arrow once its words were hidden.
+- **A button with a long label ran off the edge of a phone-sized window** on
+  systems whose text is wider than Windows' (found on a Linux machine). Such a
+  button now wraps its label. The browser check tests with deliberately wide
+  fonts, so the same slip is caught on any computer.
 - Links from one entry of [docs/HELP.md](docs/HELP.md) to a message code
   (for example from Relocate to W-LIVE) went nowhere when the guide was read
   on GitHub. The app now names its help headings the way GitHub does, so the

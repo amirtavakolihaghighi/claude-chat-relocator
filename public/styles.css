@@ -454,6 +454,10 @@ button.maprow:hover { background: var(--hover); }
   .modal > header { padding: 14px 16px 10px; } .mbody { padding: 0 16px 8px; } .mfoot { padding: 11px 16px; }
   .about .more { padding: 0 14px 10px; }
   .setup { padding: 18px 16px; }
+  /* a button with a long label wraps it rather than running off the edge (text is wider on some systems) */
+  .btn { max-width: 100%; white-space: normal; height: auto; min-height: 34px; padding-top: 6px; padding-bottom: 6px; line-height: 1.3; text-align: left; }
+  .btn.sm { min-height: 30px; padding-top: 4px; padding-bottom: 4px; }
+  .iconbtn { padding: 0; }
 }
 @media (max-width: 479.98px) {
   .brand { display: none; }   /* Home is in the sidebar, and the search needs the room */
@@ -461,7 +465,7 @@ button.maprow:hover { background: var(--hover); }
 
 /* fingers: bigger things to press */
 @media (pointer: coarse) {
-  .btn { height: 40px; } .btn.sm { height: 36px; } .iconbtn { width: 40px; } .btn.sm.iconbtn { width: 36px; }
+  .btn { min-height: 40px; } .btn.sm { min-height: 36px; } .iconbtn { width: 40px; } .btn.sm.iconbtn { width: 36px; }
   .nav a, .nav button { padding-top: 11px; padding-bottom: 11px; }
   .proj > .head { padding-top: 10px; padding-bottom: 10px; }
 }
