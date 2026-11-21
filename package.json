@@ -1,6 +1,6 @@
 {
   "name": "claude-chat-relocator",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Read every Claude Code chat outside VS Code, keep all of them in a permanent archive, and bring back chats VS Code can no longer find after you move a project.",
   "keywords": [
     "claude",

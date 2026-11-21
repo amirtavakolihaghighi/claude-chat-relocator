@@ -7,8 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-21
+
+The app now fits any window, from a wide desktop screen down to a phone, and
+its sidebar can be resized, narrowed to icons or closed. It also fixes three
+bugs found in daily use: Browse in the folder picker, a stray "null" in memory
+files, and the Memory page jumping back to the top. This is a minor version:
+nothing you used has moved, and everything you saved keeps working.
+
+### Added
+
+- **The sidebar is yours to shape.** Drag its edge to make it wider or
+  narrower (double-click the edge to reset), shrink it to an icon strip, or
+  close it with the new button at the far left of the top bar. The choice is
+  remembered per browser, and Settings can put it back to its usual size.
+- **The layout follows the window.** Laptop, tablet and phone sizes each get a
+  fitting layout: on a tablet or phone the sidebar slides over the page instead
+  of squeezing it, and on a phone the rarer top buttons move into it. A short
+  window shrinks the chat header so there is room to read. A window smaller
+  than 320 x 420 scrolls instead of cutting things off.
+- **Memory files show a tidy note box.** The settings block at the top of each
+  memory file used to appear as a rule and one giant heading with every line
+  run together. It is now a small box with the kind of note, its name and its
+  one-line description, and the rest folds away under **Technical details**.
+- The browser check now covers all of this: it drags the sidebar with a real
+  mouse, resizes the window to laptop, tablet, phone and tiny sizes, and fails
+  if any page runs off the side.
+
 ### Fixed
 
+- **Browse in the folder picker did nothing.** Choosing a folder and pressing
+  **Use this folder** closed the picker but threw the choice away, so the field
+  kept its old path. Typing or pasting a path worked, which hid the problem.
+  The picker also now ignores a folder listing that arrives late, if you have
+  already clicked somewhere else.
+- **A stray "null" at the top of memory files** that have no older versions.
+- **Clicking a memory file jumped both scrollbars back to the top.** The file
+  list is no longer rebuilt, so it keeps its place, and so does the page.
+- **The top bar spilled off the right edge** of narrow windows, and its
+  **Import / Export** button showed only an arrow once its words were hidden.
 - Links from one entry of [docs/HELP.md](docs/HELP.md) to a message code
   (for example from Relocate to W-LIVE) went nowhere when the guide was read
   on GitHub. The app now names its help headings the way GitHub does, so the
@@ -211,6 +248,7 @@ First release.
   deliberately left untouched during relocation. They record what happened at
   the time and are not configuration.
 
+[2.1.0]: https://github.com/amirtavakolihaghighi/claude-chat-relocator/releases/tag/v2.1.0
 [2.0.0]: https://github.com/amirtavakolihaghighi/claude-chat-relocator/releases/tag/v2.0.0
 [1.1.0]: https://github.com/amirtavakolihaghighi/claude-chat-relocator/releases/tag/v1.1.0
 [1.0.1]: https://github.com/amirtavakolihaghighi/claude-chat-relocator/releases/tag/v1.0.1
